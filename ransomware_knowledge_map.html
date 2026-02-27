@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ransomware A-Z — SOC Analyst Knowledge Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0a0e1a; color: #e0e6f0; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #1a0a2e 0%, #0d1b3e 50%, #0a1628 100%);
+    padding: 28px 32px 20px;
+    border-bottom: 2px solid #ff3c3c;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+  header h1 span { color: #ff3c3c; }
+  .badge { background: #ff3c3c22; border: 1px solid #ff3c3c88; color: #ff6b6b; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 1px; }
+
+  .nav-tabs {
+    display: flex; gap: 4px; padding: 16px 24px 0;
+    background: #0d1422; border-bottom: 1px solid #1e2a44;
+    overflow-x: auto; flex-wrap: nowrap;
+  }
+  .nav-tab {
+    padding: 9px 18px; border-radius: 8px 8px 0 0; cursor: pointer;
+    font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+    border: 1px solid transparent; border-bottom: none;
+    color: #7a8aaa; transition: all 0.2s;
+    background: transparent;
+  }
+  .nav-tab:hover { color: #b0c0e0; background: #1a2236; }
+  .nav-tab.active { background: #0a0e1a; color: #fff; border-color: #2a3a5a; border-bottom-color: #0a0e1a; }
+  .nav-tab .tab-icon { margin-right: 6px; }
+
+  .content { padding: 28px 24px; max-width: 1100px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+  .section-desc { color: #7a8aaa; font-size: 0.88rem; margin-bottom: 24px; }
+
+  /* Cards grid */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    background: #0d1422; border: 1px solid #1e2a44; border-radius: 12px;
+    padding: 20px; cursor: pointer; transition: all 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent, #4a9eff);
+  }
+  .card:hover { border-color: var(--accent, #4a9eff); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .card h3 { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .card p { font-size: 0.82rem; color: #7a8aaa; line-height: 1.5; }
+  .card .tag { display: inline-block; margin-top: 10px; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; background: var(--accent-bg, #1a3a5a); color: var(--accent, #4a9eff); }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #1e2a44; }
+  .tl-item { position: relative; margin-bottom: 28px; }
+  .tl-dot {
+    position: absolute; left: -28px; top: 4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--col, #4a9eff); border: 2px solid #0a0e1a;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tl-dot::after { content: ''; width: 6px; height: 6px; background: #0a0e1a; border-radius: 50%; }
+  .tl-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--col, #4a9eff); margin-bottom: 4px; }
+  .tl-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .tl-body { font-size: 0.84rem; color: #9aaccc; line-height: 1.6; }
+  .tl-techniques { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tl-technique { background: #1a2236; border: 1px solid #2a3a5a; color: #7a8aaa; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-family: monospace; }
+
+  /* Accordion */
+  .accordion { display: flex; flex-direction: column; gap: 10px; }
+  .acc-item { background: #0d1422; border: 1px solid #1e2a44; border-radius: 10px; overflow: hidden; }
+  .acc-header {
+    padding: 14px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; font-size: 0.9rem; color: #c0d0f0; transition: background 0.2s;
+  }
+  .acc-header:hover { background: #1a2236; }
+  .acc-header .severity {
+    padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+  }
+  .sev-critical { background: #ff3c3c22; color: #ff3c3c; }
+  .sev-high { background: #ff8c0022; color: #ff8c00; }
+  .sev-medium { background: #ffd70022; color: #ffd700; }
+  .sev-low { background: #00d4aa22; color: #00d4aa; }
+  .acc-body { display: none; padding: 0 18px 16px; font-size: 0.84rem; color: #9aaccc; line-height: 1.6; border-top: 1px solid #1e2a44; }
+  .acc-body.open { display: block; }
+  .acc-body ul { padding-left: 18px; margin-top: 8px; }
+  .acc-body ul li { margin-bottom: 4px; }
+  .acc-chevron { transition: transform 0.2s; font-size: 0.8rem; color: #4a5a7a; }
+  .acc-chevron.open { transform: rotate(180deg); }
+
+  /* Alert boxes */
+  .alert { border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.6; }
+  .alert-red { background: #ff3c3c12; border-left: 4px solid #ff3c3c; color: #ffaaaa; }
+  .alert-yellow { background: #ffd70012; border-left: 4px solid #ffd700; color: #ffd060; }
+  .alert-blue { background: #4a9eff12; border-left: 4px solid #4a9eff; color: #8ac0ff; }
+  .alert-green { background: #00d4aa12; border-left: 4px solid #00d4aa; color: #60f0cc; }
+  .alert strong { display: block; font-weight: 700; margin-bottom: 4px; }
+
+  /* IoC table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th { background: #1a2236; color: #7a8aaa; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px; text-align: left; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e2a44; color: #c0d0f0; }
+  tr:hover td { background: #0d1422; }
+  .mono { font-family: monospace; font-size: 0.82rem; color: #00d4aa; }
+
+  /* Two-col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .info-box { background: #0d1422; border: 1px solid #1e2a44; border-radius: 10px; padding: 18px; }
+  .info-box h4 { font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .info-box p, .info-box li { font-size: 0.83rem; color: #9aaccc; line-height: 1.6; }
+  .info-box ul { padding-left: 16px; }
+  .info-box li { margin-bottom: 4px; }
+
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 0.82rem; }
+  .progress-label { color: #9aaccc; min-width: 120px; }
+  .progress-bar { flex: 1; height: 8px; background: #1e2a44; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+
+  .checklist { display: flex; flex-direction: column; gap: 8px; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+    background: #0d1422; border: 1px solid #1e2a44; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .check-item:hover { border-color: #2a3a5a; }
+  .check-item.done { border-color: #00d4aa44; background: #00d4aa08; }
+  .check-box {
+    width: 18px; height: 18px; border: 2px solid #2a3a5a; border-radius: 4px;
+    flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .check-item.done .check-box { background: #00d4aa; border-color: #00d4aa; }
+  .check-box-tick { display: none; color: #0a0e1a; font-size: 0.7rem; font-weight: 900; }
+  .check-item.done .check-box-tick { display: block; }
+  .check-text { font-size: 0.84rem; color: #c0d0f0; line-height: 1.5; }
+  .check-item.done .check-text { color: #7a8aaa; text-decoration: line-through; }
+
+  .progress-summary { background: #0d1422; border: 1px solid #1e2a44; border-radius: 10px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+  .ps-bar-wrap { flex: 1; height: 10px; background: #1e2a44; border-radius: 5px; overflow: hidden; }
+  .ps-bar { height: 100%; background: linear-gradient(90deg, #00d4aa, #4a9eff); border-radius: 5px; transition: width 0.4s; }
+  .ps-text { font-size: 0.85rem; color: #7a8aaa; white-space: nowrap; }
+  .ps-pct { font-size: 1.2rem; font-weight: 700; color: #00d4aa; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🛡️ Ransomware <span>A–Z</span> — SOC Analyst Guide</h1>
+    <div style="margin-top:4px; font-size:0.8rem; color:#4a6a9a;">Complete knowledge base for detection, analysis & response</div>
+  </div>
+  <div class="badge">SOC REFERENCE</div>
+</header>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="showTab('what')"><span class="tab-icon">🦠</span>What Is It?</div>
+  <div class="nav-tab" onclick="showTab('lifecycle')"><span class="tab-icon">🔄</span>Attack Lifecycle</div>
+  <div class="nav-tab" onclick="showTab('types')"><span class="tab-icon">📦</span>Types & Families</div>
+  <div class="nav-tab" onclick="showTab('iocs')"><span class="tab-icon">🔍</span>IoCs & Detection</div>
+  <div class="nav-tab" onclick="showTab('impact')"><span class="tab-icon">💥</span>Impact & Vectors</div>
+  <div class="nav-tab" onclick="showTab('response')"><span class="tab-icon">🚨</span>SOC Response</div>
+  <div class="nav-tab" onclick="showTab('tools')"><span class="tab-icon">🛠️</span>Tools & Commands</div>
+  <div class="nav-tab" onclick="showTab('quiz')"><span class="tab-icon">✅</span>Self-Test</div>
+</div>
+
+<!-- TAB 1: WHAT IS IT -->
+<div class="content">
+<div id="tab-what" class="section active">
+  <div class="section-title">🦠 What Is Ransomware?</div>
+  <div class="section-desc">Core concepts every SOC analyst must know before touching any alert.</div>
+
+  <div class="alert alert-red"><strong>🔴 Core Definition</strong>Ransomware is malware that encrypts or exfiltrates victim data and demands payment (typically cryptocurrency) for restoration. Modern ransomware operators run professional criminal enterprises with support desks, negotiation teams, and affiliate programs.</div>
+
+  <div class="cards">
+    <div class="card" style="--accent:#ff3c3c; --accent-bg:#3a1a1a;">
+      <h3>🔐 Encryption Engine</h3>
+      <p>Modern ransomware uses hybrid encryption — AES-256 for file encryption (fast), RSA-2048/4096 to encrypt the AES key (secure). The victim can't decrypt without the attacker's RSA private key.</p>
+      <span class="tag" style="--accent:#ff3c3c; --accent-bg:#3a1a1a;">Core Mechanism</span>
+    </div>
+    <div class="card" style="--accent:#ff8c00; --accent-bg:#3a2a0a;">
+      <h3>💰 Extortion Model</h3>
+      <p>Payment demanded in Monero or Bitcoin via Tor-hosted portals. Modern attacks use "double extortion" — encrypt AND steal data, threatening to publish on leak sites.</p>
+      <span class="tag" style="--accent:#ff8c00; --accent-bg:#3a2a0a;">Business Model</span>
+    </div>
+    <div class="card" style="--accent:#4a9eff; --accent-bg:#1a2a4a;">
+      <h3>🏭 RaaS Model</h3>
+      <p>Ransomware-as-a-Service: Developers lease the ransomware kit to affiliates (hackers) who do the intrusion. Revenue is split ~70/30 or 80/20. LockBit, BlackCat, REvil all used this model.</p>
+      <span class="tag" style="--accent:#4a9eff; --accent-bg:#1a2a4a;">Criminal Ecosystem</span>
+    </div>
+    <div class="card" style="--accent:#00d4aa; --accent-bg:#0a2a24;">
+      <h3>📤 Double Extortion</h3>
+      <p>Attackers exfiltrate sensitive data BEFORE encryption. If ransom isn't paid, data is published on "shame blogs" or dark web leak sites — used against healthcare, legal, and finance firms.</p>
+      <span class="tag" style="--accent:#00d4aa; --accent-bg:#0a2a24;">Tactic</span>
+    </div>
+    <div class="card" style="--accent:#d070ff; --accent-bg:#2a1a3a;">
+      <h3>🌐 Triple Extortion</h3>
+      <p>Adds DDoS attacks on the victim's infrastructure OR direct threats to victim's customers/partners. Pushes pressure beyond just encryption.</p>
+      <span class="tag" style="--accent:#d070ff; --accent-bg:#2a1a3a;">Advanced Tactic</span>
+    </div>
+    <div class="card" style="--accent:#ffd700; --accent-bg:#2a2a0a;">
+      <h3>⏱️ Dwell Time</h3>
+      <p>Average attacker dwell time before detonation: 5–21 days. They map the network, escalate privileges, exfiltrate data, kill backups — THEN drop the payload. The encryption is the last step.</p>
+      <span class="tag" style="--accent:#ffd700; --accent-bg:#2a2a0a;">Key Insight</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <div class="alert alert-blue"><strong>💡 SOC Key Insight</strong>By the time you see file encryption, the attacker has likely been inside for days or weeks. Your job during detection is to identify the early-stage activity (credential theft, lateral movement) — not just the encryption event.</div>
+  </div>
+
+  <div class="two-col" style="margin-top: 20px;">
+    <div class="info-box">
+      <h4>📊 By the Numbers (2023–2024)</h4>
+      <ul>
+        <li>Average ransom payment: <strong style="color:#ff6b6b">$1.5M–$5.3M</strong></li>
+        <li>Average downtime after attack: <strong style="color:#ff6b6b">21–24 days</strong></li>
+        <li>Healthcare sector most targeted</li>
+        <li>66% of organizations hit in 2023</li>
+        <li>Only 8% recover all data after paying</li>
+        <li>RaaS groups: 50+ active groups tracked</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🎯 Most Targeted Sectors</h4>
+      <div class="progress-row"><span class="progress-label">Healthcare</span><div class="progress-bar"><div class="progress-fill" style="width:85%; background:#ff3c3c;"></div></div><span style="color:#ff3c3c; font-size:0.8rem;">85%</span></div>
+      <div class="progress-row"><span class="progress-label">Financial</span><div class="progress-bar"><div class="progress-fill" style="width:72%; background:#ff8c00;"></div></div><span style="color:#ff8c00; font-size:0.8rem;">72%</span></div>
+      <div class="progress-row"><span class="progress-label">Government</span><div class="progress-bar"><div class="progress-fill" style="width:65%; background:#ffd700;"></div></div><span style="color:#ffd700; font-size:0.8rem;">65%</span></div>
+      <div class="progress-row"><span class="progress-label">Manufacturing</span><div class="progress-bar"><div class="progress-fill" style="width:58%; background:#4a9eff;"></div></div><span style="color:#4a9eff; font-size:0.8rem;">58%</span></div>
+      <div class="progress-row"><span class="progress-label">Education</span><div class="progress-bar"><div class="progress-fill" style="width:50%; background:#00d4aa;"></div></div><span style="color:#00d4aa; font-size:0.8rem;">50%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: LIFECYCLE -->
+<div id="tab-lifecycle" class="section">
+  <div class="section-title">🔄 Ransomware Attack Lifecycle</div>
+  <div class="section-desc">The full kill chain — from initial access to ransom note. Each phase maps to MITRE ATT&CK.</div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#ff3c3c;"></div>
+      <div class="tl-label" style="--col:#ff3c3c;">Phase 1 · Initial Access</div>
+      <div class="tl-title">Getting a Foothold</div>
+      <div class="tl-body">Attacker gains first entry via phishing email, exposed RDP, VPN vulnerabilities, or software exploits. This is your earliest detection opportunity.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1566 Phishing</span>
+        <span class="tl-technique">T1133 External Remote Services</span>
+        <span class="tl-technique">T1190 Exploit Public App</span>
+        <span class="tl-technique">T1078 Valid Accounts</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#ff6a00;"></div>
+      <div class="tl-label" style="--col:#ff6a00;">Phase 2 · Execution</div>
+      <div class="tl-title">Running Malicious Code</div>
+      <div class="tl-body">Payload executes via macros, PowerShell, or living-off-the-land (LOL) binaries like certutil, mshta, regsvr32. Often runs in memory to evade AV.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1059 Command Scripting</span>
+        <span class="tl-technique">T1203 Exploitation for Exec</span>
+        <span class="tl-technique">T1218 Signed Binary Proxy</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#ff8c00;"></div>
+      <div class="tl-label" style="--col:#ff8c00;">Phase 3 · Persistence</div>
+      <div class="tl-title">Staying Alive</div>
+      <div class="tl-body">Creates scheduled tasks, registry Run keys, new admin accounts, or installs backdoors (Cobalt Strike beacon, Metasploit). Ensures they can return if detected.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1053 Scheduled Task</span>
+        <span class="tl-technique">T1547 Registry Run Keys</span>
+        <span class="tl-technique">T1136 Create Account</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#ffd700;"></div>
+      <div class="tl-label" style="--col:#ffd700;">Phase 4 · Privilege Escalation</div>
+      <div class="tl-title">Becoming Admin / Domain Admin</div>
+      <div class="tl-body">Attackers need Domain Admin to push ransomware via GPO or PSExec. Techniques: Kerberoasting, Pass-the-Hash, DCSync, exploiting unpatched local privesc vulns.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1558 Kerberoasting</span>
+        <span class="tl-technique">T1003 OS Credential Dumping</span>
+        <span class="tl-technique">T1548 Abuse Elevation Control</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#00aaff;"></div>
+      <div class="tl-label" style="--col:#00aaff;">Phase 5 · Defense Evasion</div>
+      <div class="tl-title">Blinding the SOC</div>
+      <div class="tl-body">Disabling AV/EDR, clearing event logs, deleting Shadow Copies, disabling Windows Defender. This phase is highly detectable if your logging is configured properly.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1562 Impair Defenses</span>
+        <span class="tl-technique">T1070 Indicator Removal</span>
+        <span class="tl-technique">T1490 Inhibit Recovery</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#4a9eff;"></div>
+      <div class="tl-label" style="--col:#4a9eff;">Phase 6 · Discovery & Lateral Movement</div>
+      <div class="tl-title">Mapping & Spreading</div>
+      <div class="tl-body">Network scanning (nmap, ADRecon), discovering file shares, domain controllers, backup systems. Then moves laterally using PSExec, WMI, RDP, or compromised credentials.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1018 Remote System Discovery</span>
+        <span class="tl-technique">T1021 Remote Services</span>
+        <span class="tl-technique">T1482 Domain Trust Discovery</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#d070ff;"></div>
+      <div class="tl-label" style="--col:#d070ff;">Phase 7 · Exfiltration</div>
+      <div class="tl-title">Stealing Data (Double Extortion)</div>
+      <div class="tl-body">Data staged locally, then exfiltrated via Rclone, MEGAsync, FTP, or cloud sync tools to attacker-controlled storage. Look for large outbound transfers and unusual cloud tool installs.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1048 Exfil Over Alt Protocol</span>
+        <span class="tl-technique">T1567 Exfil to Cloud Storage</span>
+        <span class="tl-technique">T1560 Archive Data</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="--col:#00d4aa;"></div>
+      <div class="tl-label" style="--col:#00d4aa;">Phase 8 · Impact (Encryption)</div>
+      <div class="tl-title">Detonation</div>
+      <div class="tl-body">Ransomware deployed via GPO, PSExec, or WMIC across all endpoints simultaneously. Files encrypted, Shadow Copies deleted, ransom note dropped. This is when most orgs detect the incident.</div>
+      <div class="tl-techniques">
+        <span class="tl-technique">T1486 Data Encrypted for Impact</span>
+        <span class="tl-technique">T1489 Service Stop</span>
+        <span class="tl-technique">T1491 Defacement</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-yellow" style="margin-top: 20px;"><strong>⚠️ Critical SOC Takeaway</strong>Phases 1–7 are where you WIN. If you catch unusual PowerShell, lateral movement, or large data transfers, you can stop the attack before encryption. By Phase 8, containment is reactive — the damage is done.</div>
+</div>
+
+<!-- TAB 3: TYPES -->
+<div id="tab-types" class="section">
+  <div class="section-title">📦 Ransomware Types & Notable Families</div>
+  <div class="section-desc">Understanding the taxonomy helps you contextualize threat intel and map TTPs.</div>
+
+  <div class="two-col" style="margin-bottom: 20px;">
+    <div class="info-box">
+      <h4>🗂️ By Type</h4>
+      <ul>
+        <li><strong style="color:#ff3c3c;">Crypto Ransomware</strong> — Encrypts files. Most common. (WannaCry, LockBit)</li>
+        <li><strong style="color:#ff8c00;">Locker Ransomware</strong> — Locks the OS/screen, not files. (Reveton)</li>
+        <li><strong style="color:#ffd700;">Wiper (Pseudo-Ransomware)</strong> — Destroys data, no real decryption. (NotPetya, Shamoon)</li>
+        <li><strong style="color:#4a9eff;">Doxware/Extortionware</strong> — Threatens to publish data (no encryption needed)</li>
+        <li><strong style="color:#00d4aa;">Mobile Ransomware</strong> — Android-targeting variants (ScaredyCat, Simplocker)</li>
+        <li><strong style="color:#d070ff;">MBR Ransomware</strong> — Overwrites Master Boot Record (Petya original)</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🏷️ By Delivery</h4>
+      <ul>
+        <li><strong style="color:#ff3c3c;">Human-Operated (Big Game Hunting)</strong> — Manual intrusion, targeted. Highest damage.</li>
+        <li><strong style="color:#ff8c00;">Commodity/Automated</strong> — Mass spray campaigns via spam. Lower skill.</li>
+        <li><strong style="color:#ffd700;">Supply Chain</strong> — Compromises software vendor to hit downstream (Kaseya/REvil)</li>
+        <li><strong style="color:#4a9eff;">Worm-Propagated</strong> — Self-spreads like WannaCry via EternalBlue</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>🔴 LockBit 3.0</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">Critical</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Disrupted (2024 Operation Cronos), successors active.<br><strong>Notable:</strong> Most prolific RaaS ever. Used bug bounty to improve malware. 1,000+ victims.<br><strong>TTPs:</strong> Exploits Fortinet/Citrix vulns, AnyDesk for persistence, Cobalt Strike C2. Encrypts in chunks for speed.<br><strong>Extension:</strong> Random 9-char hex appended to files.<br><strong>C2:</strong> Tor-based negotiation portal with countdown timer.<ul><li>Targets ESXi/VMware for VM encryption</li><li>Exfiltrates via Stealbit custom tool</li><li>Kills 100+ services and processes pre-encryption</li></ul></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>🟠 BlackCat (ALPHV)</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">Critical</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Disrupted by FBI (Dec 2023), splinters active.<br><strong>Notable:</strong> Written in Rust — cross-platform (Windows, Linux, ESXi). Highly configurable JSON config.<br><strong>TTPs:</strong> Compromised creds via IABs, uses Cobalt Strike/Brute Ratel, living-off-the-land heavily.<br><strong>Extension:</strong> Configurable, often random.<ul><li>First major Rust-based ransomware</li><li>Attacked MGM, Change Healthcare</li><li>Supports NTFS journal wipe for anti-forensics</li></ul></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>🟡 Cl0p</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">Critical</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Active — pivoted to mass exploitation of file transfer software.<br><strong>Notable:</strong> Exploited MOVEit, GoAnywhere, Accellion — zero-day focused approach. May skip encryption, rely solely on data theft.<br><strong>TTPs:</strong> Mass exploitation of managed file transfer tools; automated exfiltration; multiple victim approach simultaneously.<ul><li>Exfiltration-first model — no encryption needed</li><li>Shell company victims listed on blog simultaneously</li><li>Government agencies, airlines, banks affected</li></ul></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>🔵 WannaCry</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-high">Historical</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Legacy (2017) but still triggers alerts — unpatched systems still vulnerable.<br><strong>Notable:</strong> Used NSA's EternalBlue exploit (MS17-010 / SMBv1). Hit NHS, FedEx, 200,000+ systems globally in 72 hours.<br><strong>Extension:</strong> .WCRY or .WNCRY<br><strong>Kill Switch:</strong> Had accidental kill switch domain — sinkholed by security researcher.<ul><li>Attributed to North Korea (Lazarus Group)</li><li>Port 445 SMB scanning behavior is detectable</li><li>Systems unpatched after 7 years still exist in networks</li></ul></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>⚫ Conti</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-high">Defunct</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Dissolved 2022 after internal chat leaks. Members joined BlackBasta, Royal, etc.<br><strong>Notable:</strong> Huge organized crime structure. Leaked playbooks are still used for training.<br><strong>Legacy:</strong> Conti playbooks remain the gold standard for understanding ransomware TTP methodology.<ul><li>Had 60+ active members at peak</li><li>Attacked Irish HSE healthcare system</li><li>Conti leaks revealed full internal ops structure</li></ul></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>🟢 Black Basta</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">Active</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body"><strong>Status:</strong> Active — believed to be Conti successors.<br><strong>Notable:</strong> Sophisticated, targeted, $100M+ in ransoms. Initial access via Qakbot malware.<br><strong>TTPs:</strong> Uses BazarLoader, Qakbot, Cobalt Strike; double extortion; ESXi targeting.<ul><li>Doesn't maintain leak site — negotiates quietly</li><li>Fast encryption (full disk in hours)</li><li>Targets critical infrastructure</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: IoCs -->
+<div id="tab-iocs" class="section">
+  <div class="section-title">🔍 Indicators of Compromise & Detection Signals</div>
+  <div class="section-desc">What to look for — from network traffic to file system changes to log events.</div>
+
+  <div class="alert alert-yellow"><strong>⚠️ Important</strong>IoCs are the LAST line of detection. Behavioral detection (TTP-based) catches attackers who change IoCs. Build detection on both.</div>
+
+  <div style="margin-bottom: 24px;">
+    <table>
+      <thead><tr><th>Category</th><th>Indicator</th><th>What It Means</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td>🗂️ File System</td><td class="mono">.locked, .encrypted, .enc, .ryk</td><td>File extension changes post-encryption</td><td><span class="severity sev-critical">Critical</span></td></tr>
+        <tr><td>🗂️ File System</td><td class="mono">README.txt, HOW_TO_DECRYPT.txt, !!!READ_ME!!!.hta</td><td>Ransom notes dropped in directories</td><td><span class="severity sev-critical">Critical</span></td></tr>
+        <tr><td>🗂️ File System</td><td class="mono">vssadmin delete shadows /all /quiet</td><td>Shadow Copy deletion — backup destruction</td><td><span class="severity sev-critical">Critical</span></td></tr>
+        <tr><td>🔧 Process</td><td class="mono">psexec.exe, wmic.exe, net.exe, nltest.exe</td><td>LOL binaries used for lateral movement</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>🔧 Process</td><td class="mono">powershell -enc [base64]</td><td>Encoded PowerShell — obfuscated execution</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>🔧 Process</td><td class="mono">cmd.exe spawned from Word/Excel/Outlook</td><td>Office macro execution — initial access</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>🌐 Network</td><td class="mono">Tor traffic (port 9001/9030)</td><td>C2 communication or ransom portal access</td><td><span class="severity sev-critical">Critical</span></td></tr>
+        <tr><td>🌐 Network</td><td class="mono">Large outbound transfers (GB-scale)</td><td>Data exfiltration in progress</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>🌐 Network</td><td class="mono">Port 445 scanning (SMB)</td><td>Lateral movement / WannaCry-style propagation</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>📋 Registry</td><td class="mono">HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</td><td>Persistence via startup entries</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>📋 Event Log</td><td class="mono">Event ID 4624 (logon) + 4625 (failed)</td><td>Brute force / credential stuffing</td><td><span class="severity sev-medium">Medium</span></td></tr>
+        <tr><td>📋 Event Log</td><td class="mono">Event ID 4648 (explicit credential logon)</td><td>Pass-the-Hash / lateral movement</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>📋 Event Log</td><td class="mono">Event ID 7045 (new service installed)</td><td>Persistence via service creation</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>📋 Event Log</td><td class="mono">Event ID 4698/4702 (scheduled task)</td><td>Persistence or execution mechanism</td><td><span class="severity sev-high">High</span></td></tr>
+        <tr><td>🛡️ Defender</td><td class="mono">Defender tampered / disabled</td><td>Defense evasion — attacker blinding EDR</td><td><span class="severity sev-critical">Critical</span></td></tr>
+        <tr><td>🔑 Credential</td><td class="mono">lsass.exe memory read by non-system process</td><td>Credential dumping (Mimikatz)</td><td><span class="severity sev-critical">Critical</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h4>🔎 Key SIEM Queries to Build</h4>
+      <ul>
+        <li>Multiple file renames in short time span</li>
+        <li>Shadow copy deletion commands</li>
+        <li>wevtutil.exe clearing logs</li>
+        <li>Rclone.exe / MEGAsync process creation</li>
+        <li>Encoded PowerShell (-enc / -EncodedCommand)</li>
+        <li>PSExec usage outside IT admin accounts</li>
+        <li>New admin user creation after-hours</li>
+        <li>Outbound traffic to Tor exit nodes</li>
+        <li>BCDEdit modifying boot options</li>
+        <li>Ntdsutil.exe execution (AD database dump)</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🧰 Threat Intel Feeds for Ransomware IoCs</h4>
+      <ul>
+        <li><strong>Ransomwhere</strong> — tracks ransom payments on-chain</li>
+        <li><strong>ID Ransomware</strong> — identifies ransomware family from note/sample</li>
+        <li><strong>No More Ransom</strong> — decryptors from law enforcement</li>
+        <li><strong>CISA Alerts</strong> — government threat advisories</li>
+        <li><strong>Mandiant / CrowdStrike blogs</strong> — deep-dive TTP reports</li>
+        <li><strong>VirusTotal / Any.run</strong> — sandbox analysis</li>
+        <li><strong>MITRE ATT&CK</strong> — TTP mapping for each group</li>
+        <li><strong>Malwarebazaar</strong> — sample repository</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 5: IMPACT & VECTORS -->
+<div id="tab-impact" class="section">
+  <div class="section-title">💥 Impact Assessment & Attack Vectors</div>
+  <div class="section-desc">Understanding how ransomware gets in and what it destroys.</div>
+
+  <div class="cards">
+    <div class="card" style="--accent:#ff3c3c; --accent-bg:#3a1a1a;">
+      <h3>📧 Phishing / Spear Phishing</h3>
+      <p>Malicious attachments (Office macros, ISO, LNK files) or links to credential harvesting pages. Business Email Compromise as initial vector. Most common entry point.</p>
+      <span class="tag" style="--accent:#ff3c3c; --accent-bg:#3a1a1a;">#1 Vector</span>
+    </div>
+    <div class="card" style="--accent:#ff8c00; --accent-bg:#3a2a0a;">
+      <h3>🖥️ Exposed RDP</h3>
+      <p>RDP on port 3389 exposed to internet. Brute-forced or purchased credentials from Initial Access Brokers (IABs) on dark web. Extremely common SMB/healthcare target.</p>
+      <span class="tag" style="--accent:#ff8c00; --accent-bg:#3a2a0a;">#2 Vector</span>
+    </div>
+    <div class="card" style="--accent:#ffd700; --accent-bg:#2a2a0a;">
+      <h3>🔓 Unpatched VPN/Firewall</h3>
+      <p>Exploiting Fortinet, Pulse Secure, Citrix, Palo Alto vulnerabilities. Often zero-day or n-day. Provides direct corporate network access. LockBit favorite.</p>
+      <span class="tag" style="--accent:#ffd700; --accent-bg:#2a2a0a;">#3 Vector</span>
+    </div>
+    <div class="card" style="--accent:#4a9eff; --accent-bg:#1a2a4a;">
+      <h3>🔗 Supply Chain / MSP</h3>
+      <p>Compromising Managed Service Providers (MSPs) or software vendors to push malware to all downstream clients simultaneously. Kaseya/REvil hit 1,500+ orgs at once.</p>
+      <span class="tag" style="--accent:#4a9eff; --accent-bg:#1a2a4a;">High Impact</span>
+    </div>
+    <div class="card" style="--accent:#00d4aa; --accent-bg:#0a2a24;">
+      <h3>💾 Removable Media</h3>
+      <p>USB drives with autorun, though rare in modern targeted attacks. More common in air-gapped OT/ICS environments (power, water, manufacturing).</p>
+      <span class="tag" style="--accent:#00d4aa; --accent-bg:#0a2a24;">OT/ICS Risk</span>
+    </div>
+    <div class="card" style="--accent:#d070ff; --accent-bg:#2a1a3a;">
+      <h3>🕳️ Drive-by Downloads</h3>
+      <p>Malvertising or watering hole attacks serving malware via browser exploits. User visits legitimate-looking site; malware installs silently via browser vulnerabilities.</p>
+      <span class="tag" style="--accent:#d070ff; --accent-bg:#2a1a3a;">Opportunistic</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <div class="section-title" style="font-size: 1rem; margin-bottom: 12px;">💣 Impact Categories</div>
+    <div class="accordion">
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span>🗄️ Data Loss & Unavailability</span><span class="acc-chevron">▼</span></div>
+        <div class="acc-body">Files, databases, email stores encrypted. EHR systems offline. Production databases inaccessible. Recovery from backup (if intact) takes days–weeks. Without backups, data may be permanently lost. Financial impact: operational downtime + recovery costs + regulatory fines.</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span>🏥 Critical Infrastructure Disruption</span><span class="acc-chevron">▼</span></div>
+        <div class="acc-body">Hospitals divert patients, cancel surgeries. Colonial Pipeline attack (2021) halted fuel distribution on US East Coast for 6 days. Water treatment facilities, power grids — OT/ICS ransomware can be life-threatening.</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span>📰 Reputational & Legal Damage</span><span class="acc-chevron">▼</span></div>
+        <div class="acc-body">Data published on leak sites if ransom unpaid. GDPR/HIPAA breach notification requirements triggered. Class action lawsuits. Stock price drops. Customer trust erosion. Long-term brand damage. Regulatory investigations.</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span>💀 Backup Destruction (Inhibit Recovery)</span><span class="acc-chevron">▼</span></div>
+        <div class="acc-body">Attackers specifically target and destroy backup systems: VSS (Volume Shadow Copies), Veeam, Backup Exec, network shares. Also target NAS devices and cloud-synced backups. If no offline/immutable backup exists, recovery is impossible without paying. This is the most catastrophic impact because it removes all options.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 6: SOC RESPONSE -->
+<div id="tab-response" class="section">
+  <div class="section-title">🚨 SOC Response Framework</div>
+  <div class="section-desc">High-level incident response phases — your SOP will be built from these.</div>
+
+  <div class="alert alert-red"><strong>🔴 First 15 Minutes Are Critical</strong>Speed of containment directly determines blast radius. Every minute of delay = more encrypted files and more lateral movement. Prioritize: DETECT → SCOPE → CONTAIN (in that order, but fast).</div>
+
+  <div class="accordion">
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>1️⃣ Detection & Triage (L1)</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">L1 Task</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <strong>Trigger Sources:</strong> SIEM alert, EDR alert, user report, helpdesk ticket, threat intel feed.<br><br>
+        <strong>L1 Actions:</strong>
+        <ul>
+          <li>Verify the alert is genuine (not FP) — check EDR telemetry, event logs</li>
+          <li>Determine affected hostname(s), user account(s), IP addresses</li>
+          <li>Identify the ransomware family if possible (extension, note, VirusTotal)</li>
+          <li>Check if encryption is active or completed</li>
+          <li>Document everything with timestamps</li>
+          <li>Escalate to L2 immediately with initial findings</li>
+          <li>Do NOT power off the machine yet — volatile memory may contain keys</li>
+        </ul>
+      </div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>2️⃣ Scoping & Investigation (L2)</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-critical">L2 Task</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <strong>L2 Actions:</strong>
+        <ul>
+          <li>Determine patient zero — which host was first infected?</li>
+          <li>Identify initial access vector (phishing email? RDP? VPN?)</li>
+          <li>Map lateral movement — what other systems are affected?</li>
+          <li>Check for active C2 connections — block at firewall</li>
+          <li>Identify attacker persistence mechanisms</li>
+          <li>Determine if data exfiltration occurred</li>
+          <li>Check backup integrity — are backups safe?</li>
+          <li>Preserve forensic evidence (memory dump, disk image, logs)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>3️⃣ Containment</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-high">Both Levels</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <strong>Short-Term Containment:</strong>
+        <ul>
+          <li>Isolate affected hosts from network (VLAN, firewall rule, EDR isolation)</li>
+          <li>Disable compromised user accounts in AD</li>
+          <li>Block malicious IPs/domains at perimeter firewall and proxy</li>
+          <li>Disable VPN access if initial vector</li>
+          <li>Take backup snapshots of unaffected systems immediately</li>
+        </ul>
+        <strong>Long-Term Containment:</strong>
+        <ul>
+          <li>Deploy enhanced monitoring on adjacent systems</li>
+          <li>Force password resets across all privileged accounts</li>
+          <li>Patch the exploited vulnerability before recovery</li>
+        </ul>
+      </div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>4️⃣ Eradication</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-high">L2 Task</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <ul>
+          <li>Remove all malware artifacts from affected systems</li>
+          <li>Delete attacker-created accounts, scheduled tasks, registry keys</li>
+          <li>Remove C2 implants (Cobalt Strike beacons, RATs)</li>
+          <li>Revoke and reissue compromised credentials and certificates</li>
+          <li>Rebuild compromised systems from clean images where possible</li>
+          <li>Validate complete removal before reconnecting to network</li>
+        </ul>
+      </div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>5️⃣ Recovery</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-medium">Coordinated</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <ul>
+          <li>Restore from clean, verified backups (offline/immutable preferred)</li>
+          <li>Prioritize critical business systems first</li>
+          <li>Test restored systems before production reconnection</li>
+          <li>Monitor closely for reinfection for 30+ days</li>
+          <li>Decryption only if law enforcement has decryptor (check No More Ransom)</li>
+          <li>Do NOT pay ransom without legal/exec approval — and even then, recovery not guaranteed</li>
+        </ul>
+      </div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-header" onclick="toggleAcc(this)"><span>6️⃣ Lessons Learned & Reporting</span><div style="display:flex;gap:8px;align-items:center;"><span class="severity sev-low">Post-Incident</span><span class="acc-chevron">▼</span></div></div>
+      <div class="acc-body">
+        <ul>
+          <li>Full incident timeline reconstruction</li>
+          <li>Root cause analysis — how did attacker get in and persist?</li>
+          <li>Regulatory notifications (GDPR 72hr, HIPAA, SEC) if required</li>
+          <li>Law enforcement notification (FBI, CISA)</li>
+          <li>Insurance claim documentation</li>
+          <li>Security control gap analysis and remediation plan</li>
+          <li>Tabletop exercise updates based on gaps identified</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 7: TOOLS -->
+<div id="tab-tools" class="section">
+  <div class="section-title">🛠️ SOC Tools & Key Commands</div>
+  <div class="section-desc">Practical commands and tools you'll use during a ransomware incident.</div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h4>🔎 Investigation Commands (Windows)</h4>
+      <ul>
+        <li><span class="mono" style="font-size:0.78rem;">netstat -ano</span> — Active connections + PIDs</li>
+        <li><span class="mono" style="font-size:0.78rem;">tasklist /svc</span> — Running processes + services</li>
+        <li><span class="mono" style="font-size:0.78rem;">net user /domain</span> — AD user enumeration</li>
+        <li><span class="mono" style="font-size:0.78rem;">wevtutil qe Security /c:100</span> — Last 100 security events</li>
+        <li><span class="mono" style="font-size:0.78rem;">Get-WinEvent -LogName Security | Where {$_.Id -eq 4625}</span> — Failed logons</li>
+        <li><span class="mono" style="font-size:0.78rem;">dir /s /b *.locked 2>nul</span> — Find encrypted files</li>
+        <li><span class="mono" style="font-size:0.78rem;">vssadmin list shadows</span> — Check shadow copies</li>
+        <li><span class="mono" style="font-size:0.78rem;">schtasks /query /fo LIST /v</span> — All scheduled tasks</li>
+        <li><span class="mono" style="font-size:0.78rem;">reg query HKLM\...\Run</span> — Startup persistence</li>
+        <li><span class="mono" style="font-size:0.78rem;">ipconfig /displaydns</span> — DNS cache (C2 domains)</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🛡️ Containment Commands</h4>
+      <ul>
+        <li><span class="mono" style="font-size:0.78rem;">Disable-ADAccount -Identity [user]</span> — Disable compromised account</li>
+        <li><span class="mono" style="font-size:0.78rem;">netsh advfirewall set allprofiles state on</span> — Enable firewall</li>
+        <li><span class="mono" style="font-size:0.78rem;">netsh advfirewall firewall add rule name="Block C2" dir=out action=block remoteip=[IP]</span> — Block C2 IP</li>
+        <li><span class="mono" style="font-size:0.78rem;">net stop [servicename]</span> — Stop malicious service</li>
+        <li>EDR: Isolate host from console (CrowdStrike / SentinelOne / Defender)</li>
+        <li>SIEM: Create suppression-free alert for affected subnet</li>
+        <li>Firewall: Block egress to Tor exit nodes (known IP lists)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="info-box">
+      <h4>🧰 Essential SOC Toolset for Ransomware</h4>
+      <div class="two-col" style="margin-top: 10px;">
+        <ul>
+          <li><strong>EDR:</strong> CrowdStrike, SentinelOne, Microsoft Defender for Endpoint</li>
+          <li><strong>SIEM:</strong> Splunk, Microsoft Sentinel, Elastic SIEM</li>
+          <li><strong>Memory Forensics:</strong> Volatility3, Redline</li>
+          <li><strong>Disk Forensics:</strong> Autopsy, FTK Imager, Eric Zimmerman Tools</li>
+          <li><strong>Network:</strong> Wireshark, Zeek, NetworkMiner</li>
+        </ul>
+        <ul>
+          <li><strong>Malware Analysis:</strong> Any.run, Cuckoo Sandbox, VirusTotal</li>
+          <li><strong>Ransomware ID:</strong> ID Ransomware (id-ransomware.malwarehunterteam.com)</li>
+          <li><strong>Decryptors:</strong> NoMoreRansom.org</li>
+          <li><strong>Threat Intel:</strong> MITRE ATT&CK Navigator</li>
+          <li><strong>Log Analysis:</strong> Chainsaw, Hayabusa (EVTX fast analysis)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="alert alert-green"><strong>✅ Forensic Collection Priority Order</strong>1. Live memory (RAM) → 2. Running process list & network connections → 3. Windows Event Logs → 4. Prefetch files → 5. Registry hives → 6. Disk image. Collect in this order — most volatile first.</div>
+  </div>
+</div>
+
+<!-- TAB 8: QUIZ -->
+<div id="tab-quiz" class="section">
+  <div class="section-title">✅ Self-Test: SOC Ransomware Readiness</div>
+  <div class="section-desc">Check off concepts you're confident about. Use this to track your knowledge gaps before building the SOP.</div>
+
+  <div class="progress-summary">
+    <span class="ps-pct" id="quiz-pct">0%</span>
+    <div class="ps-bar-wrap"><div class="ps-bar" id="quiz-bar" style="width:0%;"></div></div>
+    <span class="ps-text" id="quiz-label">0 / 20 concepts mastered</span>
+  </div>
+
+  <div class="checklist" id="quiz-list">
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can explain the difference between crypto-ransomware, locker ransomware, and wipers</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I understand how hybrid encryption (AES + RSA) makes ransomware secure without a key</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can describe the RaaS model and how affiliates and developers split profits</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can explain double extortion and why paying ransom doesn't guarantee data safety</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know the 8 phases of the ransomware kill chain and can map them to MITRE ATT&CK</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know what "dwell time" means and why detection before encryption is critical</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can name 4+ major ransomware families (LockBit, BlackCat, Conti, Black Basta, Cl0p)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know the top 3 initial access vectors (phishing, exposed RDP, unpatched VPN)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can identify key IoCs: file extensions, ransom notes, shadow copy deletion commands</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know which Windows Event IDs are most relevant to ransomware detection (4624, 4648, 7045, etc.)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I understand why vssadmin delete shadows is one of the most critical alerts</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can explain what LOLBins are and give examples (certutil, mshta, wmic, regsvr32)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know what Kerberoasting and Pass-the-Hash attacks are in the context of privilege escalation</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I understand the order of forensic evidence collection (volatile first)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know L1 vs L2 response roles and when to escalate</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know the 6 IR phases: Detection → Scoping → Containment → Eradication → Recovery → Lessons Learned</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know key containment actions (isolate host, disable accounts, block C2 IPs, revoke VPN)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I know about NoMoreRansom.org and when/how to use it</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I understand regulatory notification requirements (GDPR 72hr, HIPAA, SEC disclosure)</div></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-box-tick">✓</span></div><div class="check-text">I can use ID Ransomware, VirusTotal, and Any.run for malware identification</div></div>
+  </div>
+</div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function toggleAcc(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.acc-chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function toggleCheck(item) {
+  item.classList.toggle('done');
+  updateProgress();
+}
+
+function updateProgress() {
+  const items = document.querySelectorAll('.check-item');
+  const done = document.querySelectorAll('.check-item.done').length;
+  const pct = Math.round((done / items.length) * 100);
+  document.getElementById('quiz-pct').textContent = pct + '%';
+  document.getElementById('quiz-bar').style.width = pct + '%';
+  document.getElementById('quiz-label').textContent = done + ' / ' + items.length + ' concepts mastered';
+}
+</script>
+</body>
+</html>

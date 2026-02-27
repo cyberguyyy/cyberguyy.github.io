@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colonial Pipeline — SOC Case Study</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f0e8;
+  --surface: #ede8dd;
+  --card: #fff;
+  --border: #d4cfc4;
+  --ink: #1a1612;
+  --muted: #7a7268;
+  --red: #c0392b;
+  --orange: #d35400;
+  --green: #1a6b3c;
+  --blue: #1a4a7a;
+  --yellow: #c89b00;
+  --accent: #c0392b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* GRAIN OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* MASTHEAD */
+.masthead {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.masthead-inner {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: 420px;
+}
+
+.masthead-left {
+  padding: 48px 48px 40px;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.masthead-right {
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #111;
+}
+
+.edition-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--red);
+  text-transform: uppercase;
+  border-bottom: 1px solid #333;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.case-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+h1.headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(52px, 7vw, 96px);
+  line-height: 0.95;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+h1.headline span { color: var(--red); }
+
+.lede {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.7;
+  max-width: 560px;
+  border-left: 3px solid var(--red);
+  padding-left: 16px;
+}
+
+.meta-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: #222;
+  border: 1px solid #222;
+  margin-top: 32px;
+}
+
+.meta-cell {
+  background: #0d0d0d;
+  padding: 12px 16px;
+}
+
+.meta-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #555;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.meta-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: #ddd;
+}
+
+.meta-val.red { color: var(--red); }
+.meta-val.green { color: #4caf73; }
+
+/* RIGHT PANEL */
+.stat-block {
+  border: 1px solid #333;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.stat-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px;
+  color: var(--red);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.5;
+}
+
+.severity-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(192,57,43,0.1);
+  border: 1px solid rgba(192,57,43,0.4);
+}
+
+.sev-dot {
+  width: 10px; height: 10px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+.sev-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--red);
+  letter-spacing: 1px;
+}
+
+/* NAVIGATION */
+nav.toc {
+  background: var(--ink);
+  border-bottom: 3px solid var(--red);
+  display: flex;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+nav.toc button {
+  padding: 14px 20px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #333;
+  color: #888;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+nav.toc button:hover, nav.toc button.active {
+  background: var(--red);
+  color: #fff;
+}
+
+/* MAIN WRAPPER */
+main { position: relative; z-index: 1; }
+
+/* SECTIONS */
+.section { display: none; padding: 48px; max-width: 1200px; margin: 0 auto; }
+.section.active { display: block; }
+
+/* CHAPTER HEADER */
+.chapter-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.chapter-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 80px;
+  color: var(--border);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.chapter-title { flex: 1; }
+.chapter-title .label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.chapter-title h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+  letter-spacing: 1px;
+}
+
+.chapter-title p {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 620px;
+}
+
+/* GRID */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 22px;
+  position: relative;
+}
+
+.card-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.card ul { list-style: none; margin-top: 8px; }
+.card ul li {
+  font-size: 12.5px;
+  color: var(--muted);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--surface);
+  padding-left: 14px;
+  position: relative;
+  line-height: 1.5;
+}
+.card ul li::before { content: '—'; position: absolute; left: 0; color: var(--border); }
+.card ul li strong { color: var(--ink); }
+
+.card-accent { border-left: 4px solid var(--red); }
+.card-warn { border-left: 4px solid var(--orange); }
+.card-ok { border-left: 4px solid var(--green); }
+.card-info { border-left: 4px solid var(--blue); }
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 32px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px; top: 0; bottom: 0;
+  width: 2px;
+  background: repeating-linear-gradient(to bottom, var(--ink) 0, var(--ink) 6px, transparent 6px, transparent 12px);
+}
+
+.tl-item {
+  position: relative;
+  margin-bottom: 0;
+  padding-bottom: 32px;
+  cursor: pointer;
+}
+
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: -28px; top: 6px;
+  width: 12px; height: 12px;
+  background: var(--bg);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.tl-item.threat::before { border-color: var(--red); background: var(--red); }
+.tl-item.detect::before { border-color: var(--yellow); background: var(--yellow); }
+.tl-item.contain::before { border-color: var(--blue); background: var(--blue); }
+.tl-item.recover::before { border-color: var(--green); background: var(--green); }
+
+.tl-item:hover::before { transform: scale(1.4); }
+
+.tl-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.tl-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.tl-body {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.tl-detail {
+  display: none;
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.tl-detail.open { display: block; }
+
+/* LOG BLOCK */
+.log-block {
+  background: #0d1117;
+  border: 1px solid #1e2d3d;
+  border-radius: 4px;
+  padding: 20px;
+  margin: 16px 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: #94a3b8;
+  overflow-x: auto;
+}
+
+.log-block .ts { color: #475569; }
+.log-block .host { color: #22d3ee; }
+.log-block .proc { color: #f97316; }
+.log-block .cmd { color: #fbbf24; }
+.log-block .alert { color: #ef4444; font-weight: 700; }
+.log-block .ok { color: #22c55e; }
+.log-block .comment { color: #4a5568; font-style: italic; }
+
+/* MITRE TABLE */
+.mitre-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+.mitre-table th {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 10px 14px;
+  text-align: left;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.mitre-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  vertical-align: top;
+}
+.mitre-table tr:nth-child(even) td { background: var(--surface); }
+.mitre-table tr:hover td { background: #e8e3d9; }
+
+.tid {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 500;
+}
+
+.phase-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.ph-ia { background: #fde8e8; color: var(--red); }
+.ph-ex { background: #fef3cd; color: #856404; }
+.ph-pe { background: #e8f4f8; color: var(--blue); }
+.ph-ca { background: #fde8e8; color: var(--red); }
+.ph-de { background: #e8f0fe; color: #1a56db; }
+.ph-di { background: #fff3e0; color: var(--orange); }
+.ph-lm { background: #e8fdf0; color: var(--green); }
+.ph-ef { background: #fef3cd; color: #856404; }
+.ph-im { background: #fde8e8; color: var(--red); }
+
+/* ALERT BOXES */
+.alert-box {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  border-radius: 2px;
+}
+
+.alert-box.critical { background: #fde8e8; border-left: 4px solid var(--red); }
+.alert-box.warning { background: #fff8e6; border-left: 4px solid var(--yellow); }
+.alert-box.info { background: #e8f0fe; border-left: 4px solid var(--blue); }
+.alert-box.success { background: #e8fdf0; border-left: 4px solid var(--green); }
+
+.alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.alert-content h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.alert-content p { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+/* SIEM RULE */
+.rule-block {
+  background: #0d1117;
+  border: 1px solid #22d3ee33;
+  border-top: 3px solid #22d3ee;
+  padding: 20px;
+  margin: 12px 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.rule-block .key { color: #22d3ee; }
+.rule-block .val { color: #fbbf24; }
+.rule-block .str { color: #a3e635; }
+.rule-block .comment { color: #4a5568; font-style: italic; }
+
+/* PLAYBOOK STEP */
+.playbook-step {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 4px;
+  padding-bottom: 28px;
+  position: relative;
+}
+
+.playbook-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.step-num-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.step-num-circle.l1 { background: var(--blue); }
+.step-num-circle.l2 { background: var(--red); }
+.step-num-circle.l3 { background: var(--orange); }
+
+.step-content h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.step-content p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.step-content .who {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.who.l1 { color: var(--blue); }
+.who.l2 { color: var(--red); }
+.who.l3 { color: var(--orange); }
+
+/* LESSON CARD */
+.lesson {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--red);
+  padding: 20px;
+}
+
+.lesson h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.lesson p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.lesson .fix {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #e8fdf0;
+  border-left: 3px solid var(--green);
+  font-size: 12px;
+  color: var(--green);
+  font-family: 'DM Mono', monospace;
+}
+
+/* DIVIDER */
+hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+/* SCROLL */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+
+@media (max-width: 768px) {
+  .masthead-inner { grid-template-columns: 1fr; }
+  .masthead-right { display: none; }
+  .section { padding: 24px 20px; }
+  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+  .chapter-num { font-size: 48px; }
+}
+</style>
+</head>
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-left">
+      <div>
+        <div class="edition-tag">// SOC Incident Case Study — Real-World Ransomware Analysis</div>
+        <div class="case-number">CASE FILE: INC-2021-DW-001 · CLASSIFIED: PUBLIC RECORD</div>
+        <h1 class="headline">Colonial<br><span>Pipeline</span><br>Attack</h1>
+        <p class="lede">A complete SOC-perspective breakdown of the most consequential ransomware attack in U.S. critical infrastructure history — how it happened, how it should have been detected, how it was handled, and what every analyst must learn from it.</p>
+      </div>
+      <div class="meta-block">
+        <div class="meta-cell">
+          <div class="meta-label">Threat Actor</div>
+          <div class="meta-val red">DarkSide (RaaS)</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Date</div>
+          <div class="meta-val">May 7, 2021</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Ransom Paid</div>
+          <div class="meta-val red">$4.4M (75 BTC)</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Recovered by FBI</div>
+          <div class="meta-val green">$2.3M</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Pipeline Offline</div>
+          <div class="meta-val red">6 Days</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Initial Access Vector</div>
+          <div class="meta-val">Compromised VPN Credentials</div>
+        </div>
+      </div>
+    </div>
+    <div class="masthead-right">
+      <div>
+        <div class="severity-indicator">
+          <div class="sev-dot"></div>
+          <div class="sev-text">SEVERITY: CRITICAL — NATIONAL EMERGENCY DECLARED</div>
+        </div>
+        <div class="stat-block" style="margin-top:16px;">
+          <div class="stat-num">100M</div>
+          <div class="stat-desc">gallons of fuel per day disrupted across the U.S. East Coast</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num">5,500</div>
+          <div class="stat-desc">miles of pipeline taken offline — 45% of East Coast fuel supply</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-num">~3h</div>
+          <div class="stat-desc">estimated dwell time between initial encryption detection and full shutdown decision</div>
+        </div>
+      </div>
+      <div style="font-family:'DM Mono',monospace; font-size:10px; color:#444; line-height:1.6;">
+        DATA SOURCES: FBI Flash Alert, CISA Advisory AA21-131A,<br>
+        Congressional Testimony, DarkSide Leak Site Analysis,<br>
+        Mandiant/FireEye Post-Incident Report
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="toc">
+  <button class="active" onclick="show('background')">Background</button>
+  <button onclick="show('timeline')">Attack Timeline</button>
+  <button onclick="show('siem')">SIEM Detection</button>
+  <button onclick="show('edr')">EDR Analysis</button>
+  <button onclick="show('mitre')">MITRE ATT&CK</button>
+  <button onclick="show('response')">IR Playbook</button>
+  <button onclick="show('lessons')">Lessons Learned</button>
+</nav>
+
+<main>
+
+<!-- ===== BACKGROUND ===== -->
+<div class="section active" id="section-background">
+  <div class="chapter-header">
+    <div class="chapter-num">01</div>
+    <div class="chapter-title">
+      <div class="label">Chapter One</div>
+      <h2>Background & Threat Actor Profile</h2>
+      <p>Understanding who attacked, why, and what made Colonial Pipeline an irresistible target for DarkSide ransomware-as-a-service operators.</p>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px;">
+    <div>
+      <div class="card card-accent" style="margin-bottom:16px;">
+        <div class="card-tag">The Target</div>
+        <h3>Colonial Pipeline Company</h3>
+        <p>Operator of the largest refined petroleum pipeline in the United States. Runs 5,500 miles from Houston, TX to Linden, NJ — supplying jet fuel, diesel, and gasoline to the Southeast and East Coast. Processes 2.5 million barrels daily. A single point of failure for critical national infrastructure.</p>
+      </div>
+      <div class="card card-info">
+        <div class="card-tag">Why It Was Targeted</div>
+        <h3>The Attacker's Logic</h3>
+        <ul>
+          <li><strong>Critical infrastructure</strong> = maximum pressure to pay quickly</li>
+          <li><strong>OT/IT convergence</strong> = attackers found IT network, company feared OT spillover</li>
+          <li><strong>Legacy systems</strong> = older industrial networks, poor segmentation</li>
+          <li><strong>High revenue</strong> = ability to pay large ransoms</li>
+          <li><strong>Reputational risk</strong> = public company, heavily regulated</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card card-warn" style="margin-bottom:16px;">
+        <div class="card-tag">Threat Actor — DarkSide</div>
+        <h3>Who Is DarkSide?</h3>
+        <p style="margin-bottom:10px;">DarkSide is a <strong>Ransomware-as-a-Service (RaaS)</strong> operation believed to be based in Eastern Europe (likely Russia). First appeared in August 2020. Operated a professional criminal enterprise with:</p>
+        <ul>
+          <li><strong>Developer team</strong> — built and maintained the ransomware</li>
+          <li><strong>Affiliates</strong> — independent hackers who deploy it for 20–30% cut</li>
+          <li><strong>Leak site</strong> — "DarkSide Leaks" on Tor for double extortion</li>
+          <li><strong>PR operation</strong> — claimed to donate to charity, avoid hospitals</li>
+          <li><strong>Avoided CIS countries</strong> — malware checks system locale, won't run if Russian/Ukrainian</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-tag">DarkSide Technical Profile</div>
+        <h3>Malware Characteristics</h3>
+        <ul>
+          <li><strong>Written in:</strong> C++ (Windows), Go (Linux/ESXi variant)</li>
+          <li><strong>Encryption:</strong> RSA-1024 + Salsa20 (custom implementation)</li>
+          <li><strong>Speed:</strong> Fast — partial file encryption technique</li>
+          <li><strong>Self-deletion:</strong> Deletes itself post-execution</li>
+          <li><strong>VSS wiper:</strong> Clears shadow copies automatically</li>
+          <li><strong>Config-driven:</strong> Affiliates customize targets, ransom amount</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-box critical">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <h4>The Root Cause — One Compromised Password</h4>
+      <p>FBI investigation confirmed initial access was gained through a <strong>single compromised VPN account</strong> — a legacy VPN that did not have multi-factor authentication enabled. The password was found in a batch of leaked credentials on the dark web. The account was no longer in active use, but was never deprovisioned. This single oversight enabled a $4.4M ransom, 6-day national emergency, and a historic crisis in U.S. fuel supply.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="g3">
+    <div class="card">
+      <div class="card-tag">Security Posture (Pre-Attack)</div>
+      <h3>Known Weaknesses</h3>
+      <ul>
+        <li>Legacy VPN without MFA</li>
+        <li>Stale accounts not deprovisioned</li>
+        <li>Poor IT/OT network segmentation</li>
+        <li>Limited visibility on OT network</li>
+        <li>No 24/7 SOC monitoring</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">Pre-Compromise Intelligence</div>
+      <h3>Dark Web Activity</h3>
+      <ul>
+        <li>Credential dump containing Colonial accounts circulated before attack</li>
+        <li>DarkSide affiliate recruited for "oil & gas" target weeks prior</li>
+        <li>No threat intel team monitoring dark web mentions</li>
+        <li>No automated credential monitoring service deployed</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">Regulatory Context</div>
+      <h3>Compliance vs. Security</h3>
+      <ul>
+        <li>TSA regulated pipeline cybersecurity loosely pre-2021</li>
+        <li>No mandatory incident reporting requirement at time</li>
+        <li>Post-attack: TSA issued emergency cybersecurity directives</li>
+        <li>Exposed gap between "compliant" and "secure"</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TIMELINE ===== -->
+<div class="section" id="section-timeline">
+  <div class="chapter-header">
+    <div class="chapter-num">02</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Two</div>
+      <h2>Attack Timeline — Hour by Hour</h2>
+      <p>A reconstruction of events from initial credential use through ransom payment and recovery. Click each event to expand details.</p>
+    </div>
+  </div>
+
+  <div class="alert-box warning" style="margin-bottom:32px;">
+    <div class="alert-icon">🕐</div>
+    <div class="alert-content">
+      <h4>Attacker Dwell Time: Approximately 9 Days</h4>
+      <p>DarkSide affiliates first accessed Colonial Pipeline's network around <strong>April 29, 2021</strong>. Encryption began <strong>May 7, 2021</strong> — giving attackers nearly 9 days to map the environment, steal data, and position for maximum impact before triggering ransomware. This is the window where detection must happen.</p>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:48px;">
+    <div>
+      <h3 style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; color:var(--red); text-transform:uppercase; margin-bottom:20px;">Pre-Encryption Phase (Attacker Dwell)</h3>
+      <div class="timeline">
+        <div class="tl-item threat" onclick="toggleDetail(this)">
+          <div class="tl-time">~April 29, 2021 · Day 0</div>
+          <div class="tl-title">Initial VPN Access</div>
+          <div class="tl-body">Attacker authenticates to legacy VPN using stolen credentials found in a dark web credential dump. No MFA. Access is logged but no alert fires.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> A VPN account associated with a former or inactive user was compromised. The credentials appeared in a batch of leaked passwords — likely from an unrelated breach. The attacker connected outside normal business hours from an Eastern European IP. No geolocation-based alerts were configured. The VPN logs show successful authentication, but no SIEM correlation rule fired because the account was technically valid.
+            <br><br><strong>What should have fired:</strong> Impossible travel / new geolocation alert. Inactive account login alert. After-hours VPN connection from new IP.
+          </div>
+        </div>
+        <div class="tl-item threat" onclick="toggleDetail(this)">
+          <div class="tl-time">April 29 – May 5 · Days 1–7</div>
+          <div class="tl-title">Internal Reconnaissance</div>
+          <div class="tl-body">Attackers enumerate AD, map file shares, identify backup servers and billing systems. Tools: BloodHound, ADFind, net commands.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> Over multiple sessions, attackers ran BloodHound/SharpHound to map Active Directory structure and identify privileged accounts and attack paths. ADFind queries enumerated groups, OUs, and domain controllers. Net commands (net view, net user, net group) gathered host and user information. The internal recon traffic blended with normal IT admin activity.
+            <br><br><strong>What should have fired:</strong> BloodHound collection artifact detection (LDAP queries at scale), excessive SMB enumeration from non-admin workstation, unusual net.exe usage from VPN-sourced IP.
+          </div>
+        </div>
+        <div class="tl-item threat" onclick="toggleDetail(this)">
+          <div class="tl-time">May 4–6 · Days 5–7</div>
+          <div class="tl-title">Credential Harvesting & Lateral Movement</div>
+          <div class="tl-body">Mimikatz used to dump LSASS credentials. Pass-the-Hash and Pass-the-Ticket attacks pivot attacker to privileged accounts including domain admin.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> Attackers used Mimikatz to extract NTLM hashes and Kerberos tickets from LSASS memory. With harvested credentials, they performed Pass-the-Hash attacks to move laterally across servers without needing plaintext passwords. Eventually compromised a Domain Admin account, giving full control of the Windows environment.
+            <br><br><strong>What should have fired:</strong> LSASS memory access by non-system process, anomalous NTLM authentication patterns, new admin logins from VPN IP, Kerberoasting detection (unusual SPN requests).
+          </div>
+        </div>
+        <div class="tl-item threat" onclick="toggleDetail(this)">
+          <div class="tl-time">May 6 · Day 8</div>
+          <div class="tl-title">Data Exfiltration (~100GB)</div>
+          <div class="tl-body">Attackers exfiltrate approximately 100GB of data to a cloud storage endpoint before triggering encryption. This enables double extortion.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> Using a cloud-based exfiltration tool (believed to be Rclone or similar), attackers compressed and uploaded approximately 100GB of sensitive data — billing information, contracts, business data — to a DarkSide-controlled cloud endpoint. The transfer completed over several hours. This data later appeared on DarkSide's Tor leak site as leverage.
+            <br><br><strong>What should have fired:</strong> Large outbound data transfer to non-corporate endpoint, unusual process accessing multiple file shares rapidly, cloud upload tool (rclone.exe) execution, DLP alert on bulk file copy outside business hours.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; color:var(--blue); text-transform:uppercase; margin-bottom:20px;">Detection & Response Phase</h3>
+      <div class="timeline">
+        <div class="tl-item detect" onclick="toggleDetail(this)">
+          <div class="tl-time">May 7, 2021 · ~05:00 AM ET</div>
+          <div class="tl-title">Ransomware Deployed — Encryption Begins</div>
+          <div class="tl-body">DarkSide ransomware executed across IT network. VSS deleted, services stopped. Ransom note dropped. Billing system encrypted — operations continue briefly but invoice/flow data unavailable.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> The affiliate executed DarkSide ransomware using domain admin credentials via PsExec/WMI across multiple systems simultaneously. The malware first deleted Volume Shadow Copies, stopped backup services, then began encrypting files with a .darkside extension. A ransom note "README.[ext].TXT" appeared in every folder. The billing and flow allocation systems were primary targets — encrypting them made it impossible to safely bill customers for fuel delivery quantities.
+          </div>
+        </div>
+        <div class="tl-item detect" onclick="toggleDetail(this)">
+          <div class="tl-time">May 7 · ~06:00 AM ET</div>
+          <div class="tl-title">Ransomware Note Discovered by Operator</div>
+          <div class="tl-body">A Colonial employee discovers ransom note on their system. IT notified. Incident response begins. FireEye (Mandiant) engaged as external IR firm.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> An employee attempting to access a work file found a ransom note instead. IT was alerted, who quickly confirmed widespread encryption across the corporate network. The CISO and executive leadership were notified within minutes. The decision was made to shut down pipeline operations as a precautionary measure — fearing ransomware could spread to OT systems controlling the physical pipeline. Mandiant (FireEye) was called immediately as the retained IR firm.
+          </div>
+        </div>
+        <div class="tl-item contain" onclick="toggleDetail(this)">
+          <div class="tl-time">May 7 · ~09:00 AM ET</div>
+          <div class="tl-title">Pipeline Operations Halted</div>
+          <div class="tl-body">Colonial shuts down 5,500-mile pipeline proactively. Not confirmed that OT systems were compromised — but IT/OT boundary was unclear. Safety-first decision.</div>
+          <div class="tl-detail">
+            <strong>What happened:</strong> Out of caution — and critically, because their billing systems were encrypted, making it impossible to safely know how much fuel was flowing to whom — Colonial shut down the entire pipeline. The lack of visibility into the OT/ICS environment meant they couldn't verify whether SCADA/DCS systems were infected. The shutdown was NOT because OT was compromised, but because they lacked confidence to operate safely without IT systems. This decision caused immediate national fuel shortage.
+          </div>
+        </div>
+        <div class="tl-item contain" onclick="toggleDetail(this)">
+          <div class="tl-time">May 7–8</div>
+          <div class="tl-title">FBI Notified, CISA Engaged, Negotiations Begin</div>
+          <div class="tl-body">Colonial notifies FBI. CISA issues emergency directive. National emergency declared. Colonial contacts DarkSide's negotiation portal — ransom discussions begin.</div>
+          <div class="tl-detail">
+            <strong>Ransom negotiation:</strong> DarkSide's initial demand was reported at $5M. Colonial's negotiators (via a specialist firm) engaged through the dark web chat interface provided in the ransom note. DarkSide provided a "proof of decryption" — decrypting a sample file to demonstrate they held the key. Colonial ultimately paid approximately $4.4M in Bitcoin within hours of the attack. The decryption tool provided was slow and inadequate — Colonial also relied on their own backups for recovery.
+          </div>
+        </div>
+        <div class="tl-item contain" onclick="toggleDetail(this)">
+          <div class="tl-time">May 12, 2021</div>
+          <div class="tl-title">Pipeline Operations Resume</div>
+          <div class="tl-body">Full pipeline operations restored 6 days after shutdown. Fuel shortages and panic buying caused gas station outages across 11 states. Avg gas price hit $3/gallon for first time since 2014.</div>
+          <div class="tl-detail">
+            <strong>Recovery path:</strong> Systems were restored using a combination of the DarkSide decryptor (slow, used for critical files) and restored backups. The FBI recovered $2.3M of the ransom in June 2021 by seizing a Bitcoin wallet — the private key was somehow obtained. DarkSide went dark shortly after the attack — apparently under pressure from Russian authorities concerned about the diplomatic fallout.
+          </div>
+        </div>
+        <div class="tl-item recover" onclick="toggleDetail(this)">
+          <div class="tl-time">June 7, 2021</div>
+          <div class="tl-title">DOJ Seizes $2.3M in Ransom Bitcoin</div>
+          <div class="tl-body">FBI's Virtual Asset Exploitation Unit traces and seizes approximately 63.7 BTC (~$2.3M) from a wallet controlled by a DarkSide affiliate — demonstrating that crypto is NOT fully anonymous.</div>
+          <div class="tl-detail">
+            <strong>How they did it:</strong> The FBI traced the Bitcoin payments through the blockchain. The specific wallet address used to receive the ransom was identified. The DOJ obtained a court order to seize the funds. The private key for the wallet was obtained — the exact method was not fully disclosed, but it's believed the wallet was hosted on a U.S.-based crypto exchange, giving FBI legal jurisdiction. This recovery was unprecedented at the time.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIEM ===== -->
+<div class="section" id="section-siem">
+  <div class="chapter-header">
+    <div class="chapter-num">03</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Three</div>
+      <h2>SIEM Detection — What Should Have Fired</h2>
+      <p>A deep dive into the SIEM alerts that were either missed, absent, or not acted on — and the exact detection logic that could have caught DarkSide days before encryption.</p>
+    </div>
+  </div>
+
+  <div class="alert-box critical" style="margin-bottom:28px;">
+    <div class="alert-icon">🔴</div>
+    <div class="alert-content">
+      <h4>SIEM Gap: 9 Days of Undetected Activity</h4>
+      <p>The DarkSide affiliate operated inside Colonial's network for approximately 9 days before encryption. A properly tuned SIEM should have generated high-fidelity alerts within hours of initial access. Below are the specific detection opportunities and the Splunk/Sigma rules that would catch them.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">ALERT 1 — VPN Access from New Geolocation (Missed)</h3>
+
+  <div class="g2" style="margin-bottom:8px;">
+    <div>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">The very first thing that should have triggered: a successful VPN login from a new country/IP that had never previously authenticated. This is a trivial detection to implement.</p>
+      <div class="alert-box warning">
+        <div class="alert-icon">⚡</div>
+        <div class="alert-content">
+          <h4>Expected Alert: Suspicious VPN Authentication</h4>
+          <p>Severity: HIGH · Category: Initial Access · Rule: New Geolocation + Inactive Account + After Hours</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="log-block">
+<span class="comment"># Actual VPN Authentication Log (reconstructed)</span>
+<span class="ts">2021-04-29 03:14:22 UTC</span>
+<span class="host">vpn-gateway-01.colonial.local</span>
+<span class="proc">auth.log</span>
+<span class="cmd">event=VPN_LOGIN user=svc_colonial_legacy</span>
+<span class="cmd">src_ip=185.220.101.XX country=UA</span>
+<span class="cmd">last_login=2019-11-14 (543 days ago)</span>
+<span class="cmd">mfa_used=false</span>
+<span class="alert">⚠ NO ALERT GENERATED — Rule not configured</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-block">
+<span class="comment">## Splunk SPL — VPN Impossible Travel / New Geolocation Detection</span>
+<span class="key">index</span>=<span class="val">network_auth</span> <span class="key">sourcetype</span>=<span class="val">vpn_logs</span> <span class="key">action</span>=<span class="val">success</span>
+| <span class="key">eval</span> <span class="val">login_country</span>=iplocation(src_ip)
+| <span class="key">stats</span> values(login_country) as countries dc(login_country) as country_count
+  earliest(_time) as first_seen latest(_time) as last_seen by user
+| <span class="key">where</span> country_count > 1 AND last_seen - first_seen &lt; 86400
+| <span class="key">eval</span> alert=<span class="str">"IMPOSSIBLE_TRAVEL: User logged in from multiple countries within 24hrs"</span>
+<span class="comment">---</span>
+<span class="comment">## Also: Alert on inactive accounts (no login in 90+ days)</span>
+<span class="key">index</span>=<span class="val">network_auth</span> <span class="key">sourcetype</span>=<span class="val">vpn_logs</span> <span class="key">action</span>=<span class="val">success</span>
+| <span class="key">join</span> user [ search <span class="key">index</span>=<span class="val">ad_logs</span>
+  | <span class="key">where</span> datediff(now(), last_logon_date) > 90
+  | <span class="key">fields</span> user ]
+| <span class="key">eval</span> alert=<span class="str">"DORMANT_ACCOUNT_VPN_LOGIN: Account inactive 90+ days just authenticated"</span>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">ALERT 2 — AD Enumeration / BloodHound Collection (Missed)</h3>
+
+  <div class="g2" style="margin-bottom:8px;">
+    <div>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">BloodHound's SharpHound collector generates massive volumes of LDAP queries in a short time — a very detectable pattern. Thousands of LDAP requests from a workstation in seconds is not normal IT behavior.</p>
+      <div class="log-block">
+<span class="comment"># AD Event Logs — SharpHound LDAP Enumeration</span>
+<span class="ts">2021-04-30 14:22:07</span> <span class="host">DC01.colonial.local</span>
+<span class="proc">Security</span> <span class="cmd">EventID=4661</span>
+<span class="cmd">ObjectType=SAM_DOMAIN</span>
+<span class="cmd">ObjectName=colonial.local</span>
+<span class="cmd">SubjectUserName=svc_colonial_legacy</span>
+<span class="ts">2021-04-30 14:22:07</span> <span class="host">DC01</span>
+<span class="cmd">EventID=4661 ObjectType=SAM_USER ×3,847</span>
+<span class="cmd">ProcessName=C:\Users\Public\srv.exe</span>
+<span class="alert">⚠ 3,847 SAM_USER queries in 4 seconds from single process</span>
+<span class="alert">⚠ NO ALERT GENERATED</span>
+      </div>
+    </div>
+    <div>
+      <div class="rule-block">
+<span class="comment">## Sigma Rule — BloodHound/SharpHound Collection</span>
+<span class="key">title</span>: <span class="val">Possible BloodHound AD Enumeration</span>
+<span class="key">status</span>: <span class="val">stable</span>
+<span class="key">logsource</span>:
+  <span class="key">product</span>: <span class="val">windows</span>
+  <span class="key">service</span>: <span class="val">security</span>
+<span class="key">detection</span>:
+  <span class="key">selection</span>:
+    <span class="key">EventID</span>: <span class="val">4661</span>
+    <span class="key">ObjectType</span>:
+      - <span class="str">'SAM_USER'</span>
+      - <span class="str">'SAM_GROUP'</span>
+      - <span class="str">'SAM_DOMAIN'</span>
+  <span class="key">timeframe</span>: <span class="val">10s</span>
+  <span class="key">condition</span>: <span class="val">selection | count() by SubjectUserName > 200</span>
+<span class="key">level</span>: <span class="val">high</span>
+<span class="key">tags</span>:
+  - <span class="str">attack.discovery</span>
+  - <span class="str">attack.t1087</span>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">ALERT 3 — LSASS Memory Access (Should Have Fired)</h3>
+
+  <div class="g2" style="margin-bottom:8px;">
+    <div>
+      <div class="log-block">
+<span class="comment"># EDR/Sysmon Event — LSASS Access (Mimikatz)</span>
+<span class="ts">2021-05-05 01:44:12</span>
+<span class="host">WRK-FIN-08.colonial.local</span>
+<span class="proc">EventID=10 (Sysmon: ProcessAccess)</span>
+<span class="cmd">SourceImage: C:\Users\Public\Temp\srv.exe</span>
+<span class="cmd">TargetImage: C:\Windows\System32\lsass.exe</span>
+<span class="cmd">GrantedAccess: 0x1010 (PROCESS_VM_READ)</span>
+<span class="cmd">CallTrace: srv.exe+0x2341f</span>
+<span class="alert">⚠ Non-system process accessing LSASS memory</span>
+<span class="comment"># This IS a high-confidence Mimikatz indicator</span>
+      </div>
+    </div>
+    <div>
+      <div class="rule-block">
+<span class="comment">## Splunk — LSASS Memory Access by Suspicious Process</span>
+<span class="key">index</span>=<span class="val">endpoint</span> <span class="key">EventCode</span>=<span class="val">10</span>
+  <span class="key">TargetImage</span>=<span class="str">"*lsass.exe"</span>
+  NOT <span class="key">SourceImage</span> IN (
+    <span class="str">"*MsMpEng.exe"</span>,  <span class="comment">/* Defender */</span>
+    <span class="str">"*svchost.exe"</span>,   <span class="comment">/* System */</span>
+    <span class="str">"*csrss.exe"</span>,     <span class="comment">/* System */</span>
+    <span class="str">"*lsm.exe"</span>        <span class="comment">/* System */</span>
+  )
+  <span class="key">GrantedAccess</span> IN (<span class="str">"0x1010"</span>, <span class="str">"0x1410"</span>, <span class="str">"0x143a"</span>)
+| <span class="key">eval</span> severity=<span class="str">"CRITICAL"</span>
+| <span class="key">eval</span> alert=<span class="str">"CREDENTIAL_DUMP: Suspected Mimikatz"</span>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">ALERT 4 — VSS Deletion: Pre-Encryption Canary (Critical Miss)</h3>
+
+  <div class="g2">
+    <div>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">VSS deletion is one of the most reliable pre-ransomware signals that exists. ANY instance of vssadmin deleting shadows should trigger an <strong>immediate high-priority alert with auto-isolation</strong>. There is no legitimate admin reason to do this outside of a planned, documented maintenance window.</p>
+      <div class="log-block">
+<span class="comment"># Process Creation Log — VSS Deletion</span>
+<span class="ts">2021-05-07 04:58:33</span>
+<span class="host">FIN-SVR-01.colonial.local</span>
+<span class="proc">EventID=4688</span>
+<span class="cmd">NewProcessName: C:\Windows\System32\vssadmin.exe</span>
+<span class="cmd">CommandLine: vssadmin.exe delete shadows /all /quiet</span>
+<span class="cmd">ParentProcess: C:\Windows\System32\cmd.exe</span>
+<span class="cmd">User: COLONIAL\svc_admin_legacy (DA)</span>
+<span class="ts">2021-05-07 04:58:34</span>
+<span class="cmd">CommandLine: wbadmin delete catalog -quiet</span>
+<span class="ts">2021-05-07 04:58:35</span>
+<span class="cmd">CommandLine: bcdedit /set {default} recoveryenabled No</span>
+<span class="alert">⚠⚠ PRE-RANSOMWARE INDICATOR SEQUENCE DETECTED</span>
+<span class="alert">⚠⚠ ENCRYPTION WILL BEGIN IN &lt;60 SECONDS</span>
+      </div>
+    </div>
+    <div>
+      <div class="rule-block">
+<span class="comment">## Splunk — VSS Deletion + Recovery Disable Chain</span>
+<span class="key">index</span>=<span class="val">endpoint</span> <span class="key">EventCode</span>=<span class="val">4688</span>
+(
+  <span class="key">CommandLine</span>=<span class="str">"*vssadmin* delete*shadows*"</span> OR
+  <span class="key">CommandLine</span>=<span class="str">"*wmic* shadowcopy* delete*"</span> OR
+  <span class="key">CommandLine</span>=<span class="str">"*wbadmin* delete*catalog*"</span> OR
+  <span class="key">CommandLine</span>=<span class="str">"*bcdedit* recoveryenabled*no*"</span> OR
+  <span class="key">CommandLine</span>=<span class="str">"*bcdedit* safeboot*"</span>
+)
+| <span class="key">stats</span> count values(CommandLine) as cmds
+  dc(host) as hosts by user, _time span=5m
+| <span class="key">where</span> count >= 2
+| <span class="key">eval</span> severity=<span class="str">"CRITICAL"</span>
+| <span class="key">eval</span> action=<span class="str">"AUTO_ISOLATE + PAGE_SOC_IMMEDIATELY"</span>
+<span class="comment">---</span>
+<span class="comment">## Recommendation: This rule should trigger</span>
+<span class="comment">## automated endpoint isolation via SOAR/EDR API</span>
+<span class="comment">## DO NOT wait for analyst — time is seconds</span>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">ALERT 5 — Mass File Encryption in Progress (Last Resort Detection)</h3>
+
+  <div class="log-block">
+<span class="comment"># FileSystem Event Logs — Mass Rename (Honeypot / File Integrity)</span>
+<span class="ts">2021-05-07 05:01:14</span> <span class="host">FIN-SVR-01</span> <span class="cmd">File renamed: Q3_Report.xlsx → Q3_Report.xlsx.darkside (1 of 847 in 12 seconds)</span>
+<span class="ts">2021-05-07 05:01:14</span> <span class="host">FIN-SVR-02</span> <span class="cmd">File renamed: payroll_2021.csv → payroll_2021.csv.darkside (1 of 1,203 in 15 seconds)</span>
+<span class="ts">2021-05-07 05:01:15</span> <span class="host">FILE-SVR-01</span> <span class="cmd">Ransom note created: README.darkside.TXT in 847 directories simultaneously</span>
+<span class="alert">⚠ RANSOMWARE CONFIRMED — ENCRYPTION ACTIVE ACROSS 3+ HOSTS</span>
+<span class="comment"># At this point, isolation is the ONLY response. Recovery depends on backups.</span>
+<span class="comment"># Detection here = too late to prevent encryption. Earlier alerts are critical.</span>
+  </div>
+
+  <div class="g3" style="margin-top:24px;">
+    <div class="card card-ok">
+      <div class="card-tag">Detection Opportunity 1</div>
+      <h3>⏱ Day 1 — VPN Alert</h3>
+      <p>Dormant account + new geo + no MFA. Would have stopped the attack at entry. Easiest to implement. Highest value.</p>
+    </div>
+    <div class="card card-warn">
+      <div class="card-tag">Detection Opportunity 2</div>
+      <h3>⏱ Day 2 — Recon Alert</h3>
+      <p>BloodHound LDAP burst pattern. Would have given 8 days to respond before encryption. Clear behavioral signal.</p>
+    </div>
+    <div class="card card-accent">
+      <div class="card-tag">Detection Opportunity 3</div>
+      <h3>⏱ Day 9 — VSS Deletion</h3>
+      <p>Last chance before encryption. Automated isolation could have stopped spread. Minutes matter — this needs SOAR auto-response.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDR ===== -->
+<div class="section" id="section-edr">
+  <div class="chapter-header">
+    <div class="chapter-num">04</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Four</div>
+      <h2>EDR Analysis — Endpoint Evidence</h2>
+      <p>What an EDR (CrowdStrike / SentinelOne) would have captured on compromised endpoints — process trees, memory forensics, and behavioral detections.</p>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px;">
+    <div class="card card-accent" style="margin-bottom:16px;">
+      <div class="card-tag">Process Tree — DarkSide Execution</div>
+      <h3>Parent-Child Process Hierarchy</h3>
+      <div class="log-block" style="margin-top:10px; font-size:11px;">
+<span class="ok">cmd.exe</span> [PID: 4821] [Parent: wmic.exe / PsExec]
+<span class="comment">  └─</span> <span class="proc">powershell.exe -enc JABzAHYAYwA...</span>  [obfuscated]
+<span class="comment">       └─</span> <span class="proc">srv.exe</span> (renamed from darkside.exe)
+<span class="comment">            ├─</span> <span class="cmd">vssadmin.exe delete shadows /all /quiet</span>
+<span class="comment">            ├─</span> <span class="cmd">wbadmin.exe delete catalog -quiet</span>
+<span class="comment">            ├─</span> <span class="cmd">bcdedit.exe /set {default} recoveryenabled No</span>
+<span class="comment">            ├─</span> <span class="cmd">net.exe stop "Sophos Agent"</span>
+<span class="comment">            ├─</span> <span class="cmd">net.exe stop "Windows Backup"</span>
+<span class="comment">            └─</span> <span class="alert">[File encryption loop — 4,200 files/min]</span>
+      </div>
+    </div>
+    <div>
+      <div class="card card-info" style="margin-bottom:16px;">
+        <div class="card-tag">EDR Behavioral Detections</div>
+        <h3>Triggered Indicators (If EDR Was Active)</h3>
+        <ul>
+          <li><strong>SUSPICIOUS_PROCESS_CHAIN:</strong> wmic spawning PowerShell with encoded args</li>
+          <li><strong>LSASS_ACCESS:</strong> srv.exe (unsigned) accessing lsass.exe memory</li>
+          <li><strong>RANSOMWARE_CANARY:</strong> Honeypot file in protected location modified</li>
+          <li><strong>MASS_FILE_OP:</strong> Single process modifying 500+ files in 10 seconds</li>
+          <li><strong>VSS_DELETION:</strong> vssadmin.exe with shadow delete args</li>
+          <li><strong>AV_KILL:</strong> Process terminating security service via net stop</li>
+          <li><strong>UNSIGNED_BINARY:</strong> Executable in C:\Users\Public\ — no valid signature</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-tag">DarkSide Binary Analysis</div>
+        <h3>Malware Characteristics (EDR Telemetry)</h3>
+        <ul>
+          <li><strong>File:</strong> srv.exe (disguised as service binary)</li>
+          <li><strong>Hash (SHA256):</strong> 9cee5522a7ca2bfca7cd3d9daba23e9a30deb6205f56c12045839075f7627297</li>
+          <li><strong>Compiler:</strong> MSVC (C++), no debug symbols</li>
+          <li><strong>Packer:</strong> Custom packer, entropy 7.8 (high — likely packed)</li>
+          <li><strong>Signing:</strong> Unsigned — immediate suspicion signal</li>
+          <li><strong>Import table:</strong> CryptGenKey, CryptEncrypt, CreateFileW, FindFirstFileW</li>
+          <li><strong>Strings:</strong> Obfuscated — XOR decoded at runtime</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">Memory Forensics — Volatility Analysis</h3>
+  <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">During the IR process, Mandiant analysts ran memory forensics on captured RAM images. This is what they found:</p>
+
+  <div class="log-block">
+<span class="comment"># Volatility 3 — Process Analysis Output</span>
+$ python3 vol.py -f colonial_dc01.mem windows.pslist
+<span class="ok">PID    PPID   Process         Offset         Create Time</span>
+<span class="ts">4     0      System          0x8a2b0        2021-04-29</span>
+<span class="ts">816   4      smss.exe        0x9f4a0        2021-04-29</span>
+<span class="alert">4821  2304   srv.exe         0xde4f1        2021-05-07 04:57:11  ← DARKSIDE</span>
+<span class="alert">4822  4821   vssadmin.exe    0xde4f2        2021-05-07 04:58:33  ← VSS DELETE</span>
+<span class="comment"></span>
+<span class="comment"># Malfind — Injected code regions</span>
+$ python3 vol.py -f colonial_dc01.mem windows.malfind --pid 4821
+<span class="alert">Process: srv.exe PID: 4821</span>
+<span class="alert">Suspicious region @ 0x2a0000 (size: 0x180000)</span>
+<span class="alert">MZ header present — PE injected into process memory</span>
+<span class="alert">Entropy: 7.94 — HIGH (packed/encrypted code)</span>
+<span class="comment"></span>
+<span class="comment"># Network connections at time of capture</span>
+$ python3 vol.py -f colonial_dc01.mem windows.netstat
+<span class="alert">srv.exe:4821   TCP   10.1.22.44:52847 → 185.220.101.XX:443 ESTABLISHED</span>
+<span class="comment">                                          ↑ C2 server (Tor exit node)</span>
+  </div>
+
+  <div class="g2" style="margin-top:20px;">
+    <div class="card card-ok">
+      <div class="card-tag">EDR Response Capability</div>
+      <h3>What Modern EDR Can Do Automatically</h3>
+      <ul>
+        <li><strong>Kill malicious process</strong> immediately upon ransomware behavior detection</li>
+        <li><strong>Isolate endpoint</strong> from network while maintaining EDR comms</li>
+        <li><strong>Rollback</strong> encrypted files (SentinelOne Rollback, CrowdStrike File Recovery)</li>
+        <li><strong>Block hash</strong> across all enterprise endpoints instantly</li>
+        <li><strong>Preserve memory dump</strong> for forensics before isolation</li>
+        <li><strong>Alert SIEM + SOAR</strong> for orchestrated response</li>
+      </ul>
+    </div>
+    <div class="card card-warn">
+      <div class="card-tag">Colonial's EDR Gap</div>
+      <h3>What Was Missing</h3>
+      <ul>
+        <li>EDR coverage was <strong>not enterprise-wide</strong> — IT/OT boundary endpoints unmonitored</li>
+        <li>EDR policies in <strong>detect-only mode</strong>, not prevent/isolate mode</li>
+        <li>No 24/7 SOC watching EDR console — alerts sat unactioned overnight</li>
+        <li>No SOAR integration — manual analyst process required for response</li>
+        <li>Legacy systems with no EDR agent installed</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MITRE ===== -->
+<div class="section" id="section-mitre">
+  <div class="chapter-header">
+    <div class="chapter-num">05</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Five</div>
+      <h2>MITRE ATT&CK Framework Mapping</h2>
+      <p>Complete mapping of every observed DarkSide technique to MITRE ATT&CK — the universal language for describing adversary behavior used in threat intel, detection engineering, and IR reports.</p>
+    </div>
+  </div>
+
+  <div class="alert-box info" style="margin-bottom:24px;">
+    <div class="alert-icon">ℹ️</div>
+    <div class="alert-content">
+      <h4>What is MITRE ATT&CK?</h4>
+      <p>MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. As a SOC analyst, mapping incidents to ATT&CK helps you communicate findings clearly, write better detection rules, and understand where your defensive gaps are. Every technique has a unique ID (T####) you'll see in threat intel reports, SIEM rule sets, and vendor advisories.</p>
+    </div>
+  </div>
+
+  <table class="mitre-table">
+    <thead>
+      <tr>
+        <th>ATT&CK ID</th>
+        <th>Technique Name</th>
+        <th>Tactic Phase</th>
+        <th>Observed in Colonial Attack</th>
+        <th>Detection Signal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tid">T1078.002</span></td>
+        <td>Valid Accounts: Domain Accounts</td>
+        <td><span class="phase-badge ph-ia">Initial Access</span></td>
+        <td>Stolen VPN credentials used — account valid but compromised. No MFA. Legacy account not deprovisioned.</td>
+        <td>Login from new geo, dormant account activity, no MFA flag</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1133</span></td>
+        <td>External Remote Services</td>
+        <td><span class="phase-badge ph-ia">Initial Access</span></td>
+        <td>Legacy VPN service exploited as entry point. No MFA, no geo-restriction policy.</td>
+        <td>VPN log monitoring, MFA enforcement gaps</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1059.001</span></td>
+        <td>PowerShell</td>
+        <td><span class="phase-badge ph-ex">Execution</span></td>
+        <td>Encoded PowerShell used to download and execute DarkSide payload. Base64 encoded command line arguments.</td>
+        <td>PowerShell with -enc flag, AMSI bypass attempts, Script Block Logging</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1569.002</span></td>
+        <td>System Services: Service Execution</td>
+        <td><span class="phase-badge ph-ex">Execution</span></td>
+        <td>PsExec used to execute ransomware remotely across multiple systems simultaneously using domain admin creds.</td>
+        <td>PsExec patterns in process logs, ADMIN$ share access</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1547.001</span></td>
+        <td>Registry Run Keys / Startup Folder</td>
+        <td><span class="phase-badge ph-pe">Persistence</span></td>
+        <td>Registry run keys modified to maintain access during dwell period. Remote access tool installed.</td>
+        <td>Registry modification events (Event 4657), new Run key values</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1003.001</span></td>
+        <td>OS Credential Dumping: LSASS Memory</td>
+        <td><span class="phase-badge ph-ca">Credential Access</span></td>
+        <td>Mimikatz executed to dump LSASS — harvested NTLM hashes and Kerberos tickets for lateral movement.</td>
+        <td>Sysmon Event 10 (LSASS access by unsigned process), 0x1010 access rights</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1558.003</span></td>
+        <td>Kerberoasting</td>
+        <td><span class="phase-badge ph-ca">Credential Access</span></td>
+        <td>Service account TGS tickets requested for offline cracking to elevate to domain admin privileges.</td>
+        <td>Unusual SPN requests (Event 4769), RC4 encryption for TGS tickets</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1562.001</span></td>
+        <td>Impair Defenses: Disable Security Tools</td>
+        <td><span class="phase-badge ph-de">Defense Evasion</span></td>
+        <td>net stop commands killed AV and backup services. Windows Defender disabled via PowerShell Set-MpPreference.</td>
+        <td>Service stop events for AV processes, Defender tamper alerts</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1027</span></td>
+        <td>Obfuscated Files or Information</td>
+        <td><span class="phase-badge ph-de">Defense Evasion</span></td>
+        <td>DarkSide binary packed with custom packer. PowerShell commands Base64-encoded. Strings XOR-encrypted at runtime.</td>
+        <td>High-entropy binary detection, encoded PowerShell alert</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1087.002</span></td>
+        <td>Account Discovery: Domain Account</td>
+        <td><span class="phase-badge ph-di">Discovery</span></td>
+        <td>BloodHound/SharpHound used for AD enumeration. net user /domain, ADFind queries across all OUs.</td>
+        <td>Bulk LDAP query pattern, BloodHound collection artifacts</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1482</span></td>
+        <td>Domain Trust Discovery</td>
+        <td><span class="phase-badge ph-di">Discovery</span></td>
+        <td>nltest /domain_trusts used to map trust relationships between domains and identify lateral targets.</td>
+        <td>nltest.exe execution, LDAP trust queries from non-DC host</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1021.002</span></td>
+        <td>Remote Services: SMB/Windows Admin Shares</td>
+        <td><span class="phase-badge ph-lm">Lateral Movement</span></td>
+        <td>ADMIN$ and C$ shares used with stolen credentials for lateral movement and malware distribution.</td>
+        <td>Unusual admin share access, PsExec artifacts, net use to admin shares</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1550.002</span></td>
+        <td>Use Alternate Authentication: Pass the Hash</td>
+        <td><span class="phase-badge ph-lm">Lateral Movement</span></td>
+        <td>NTLM hashes from Mimikatz used for PTH attacks to authenticate to remote systems without passwords.</td>
+        <td>NTLM auth from unusual source, Event 4624 logon type 3 from VPN IP</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1048</span></td>
+        <td>Exfiltration Over Alternative Protocol</td>
+        <td><span class="phase-badge ph-ef">Exfiltration</span></td>
+        <td>~100GB exfiltrated to attacker cloud storage using Rclone before encryption. HTTPS to non-corporate endpoint.</td>
+        <td>Rclone.exe detection, large outbound transfer alert, DLP triggers</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1490</span></td>
+        <td>Inhibit System Recovery</td>
+        <td><span class="phase-badge ph-im">Impact</span></td>
+        <td>vssadmin delete shadows /all, wbadmin delete catalog, bcdedit recoveryenabled No — all executed pre-encryption.</td>
+        <td>VSS deletion commands — CRITICAL ALERT — auto-isolate trigger</td>
+      </tr>
+      <tr>
+        <td><span class="tid">T1486</span></td>
+        <td>Data Encrypted for Impact</td>
+        <td><span class="phase-badge ph-im">Impact</span></td>
+        <td>RSA-1024 + Salsa20 hybrid encryption. Files renamed .darkside. Ransom note README.darkside.TXT dropped everywhere.</td>
+        <td>Mass file rename, ransom note creation, honeypot file modification</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="g3" style="margin-top:24px;">
+    <div class="card card-accent">
+      <div class="card-tag">Your Detection Coverage</div>
+      <h3>Tactic Coverage Map</h3>
+      <ul>
+        <li><strong>Initial Access:</strong> T1078, T1133</li>
+        <li><strong>Execution:</strong> T1059.001, T1569.002</li>
+        <li><strong>Persistence:</strong> T1547.001</li>
+        <li><strong>Credential Access:</strong> T1003.001, T1558.003</li>
+        <li><strong>Defense Evasion:</strong> T1562.001, T1027</li>
+        <li><strong>Discovery:</strong> T1087.002, T1482</li>
+        <li><strong>Lateral Movement:</strong> T1021.002, T1550.002</li>
+        <li><strong>Exfiltration:</strong> T1048</li>
+        <li><strong>Impact:</strong> T1490, T1486</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">ATT&CK Navigator Usage</div>
+      <h3>How to Use in Your SOC</h3>
+      <p style="margin-bottom:8px;">Use ATT&CK Navigator (attack.mitre.org/navigator) to:</p>
+      <ul>
+        <li>Visualize which techniques you have detection rules for</li>
+        <li>Find coverage gaps to prioritize new rules</li>
+        <li>Color-code: red = no detection, yellow = partial, green = covered</li>
+        <li>Share technique maps with team during threat intel briefings</li>
+        <li>Map new threat actor reports to compare with past incidents</li>
+      </ul>
+    </div>
+    <div class="card card-info">
+      <div class="card-tag">Key Insight</div>
+      <h3>The Golden Technique</h3>
+      <p><strong style="color:var(--red)">T1490 (Inhibit System Recovery)</strong> is the single highest-value detection for ransomware. Every major ransomware family runs VSS deletion. If you have ONE automated response rule, make it this. Alert + auto-isolate on any vssadmin delete shadows command, no exceptions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESPONSE ===== -->
+<div class="section" id="section-response">
+  <div class="chapter-header">
+    <div class="chapter-num">06</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Six</div>
+      <h2>Incident Response Playbook</h2>
+      <p>What the SOC should have done — and what Colonial's IR team actually did. A step-by-step L1/L2/L3 response framework based on this incident.</p>
+    </div>
+  </div>
+
+  <div class="alert-box info" style="margin-bottom:28px;">
+    <div class="alert-icon">📋</div>
+    <div class="alert-content">
+      <h4>How to Read This Playbook</h4>
+      <p><strong>L1 (SOC Analyst L1):</strong> First responder — triage, basic containment, escalation. <strong>L2 (SOC Analyst L2):</strong> Deep investigation, forensics, threat hunting. <strong>L3/IR (Incident Responder / IR Lead):</strong> Full incident command, external engagement, recovery decisions.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:16px; font-weight:700; margin-bottom:20px; color:var(--red);">PHASE 1 — DETECTION & TRIAGE</h3>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l1">1</div>
+    <div class="step-content">
+      <div class="who l1">L1 ANALYST — IMMEDIATE (0–5 min)</div>
+      <h4>Acknowledge & Classify the Alert</h4>
+      <p>Alert fires in SIEM (VSS deletion, mass file rename, or ransomware note detected). L1 opens ticket in TheHive/ServiceNow. Classifies as P1 — Ransomware. Does NOT close or snooze. Immediately notifies L2 on-call via Slack/phone.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l1">2</div>
+    <div class="step-content">
+      <div class="who l1">L1 ANALYST — 5–15 min</div>
+      <h4>Initial Scope Assessment</h4>
+      <p>Determine: How many hosts are affected? Is this one endpoint or spreading across the network? Check SIEM for correlated alerts on other hosts. Look for ransom notes on file servers. Identify source host (patient zero). DO NOT reboot or run antivirus scans on affected hosts — this destroys evidence.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l1">3</div>
+    <div class="step-content">
+      <div class="who l1">L1 ANALYST — 10–15 min</div>
+      <h4>Network Isolation of Affected Endpoints</h4>
+      <p>Use EDR console (CrowdStrike: Contain Host / SentinelOne: Disconnect from Network) to isolate affected endpoints from the network while maintaining EDR communication. If EDR is unavailable: disable NIC, change VLAN, or have network team block switch port. Document every action with timestamp.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h3 style="font-size:16px; font-weight:700; margin-bottom:20px; color:var(--blue);">PHASE 2 — INVESTIGATION (L2 LEAD)</h3>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l2">4</div>
+    <div class="step-content">
+      <div class="who l2">L2 ANALYST — 0–30 min after escalation</div>
+      <h4>Identify Patient Zero & Initial Access Vector</h4>
+      <p>Query SIEM for the earliest evidence of attacker activity. Look for: first occurrence of malicious process, first authentication from attacker IP, first anomalous network connection. Build a timeline. In Colonial's case: query VPN logs for the compromised account, trace back to first login from foreign IP 9 days prior.</p>
+      <div class="log-block" style="margin-top:10px; font-size:11px;">
+<span class="comment"># Splunk query to find patient zero</span>
+<span class="key">index</span>=<span class="val">endpoint</span> host=* <span class="cmd">srv.exe OR darkside.exe OR *.darkside</span>
+| <span class="key">stats</span> min(_time) as first_seen by host
+| <span class="key">sort</span> first_seen asc
+| <span class="key">head</span> 1
+<span class="comment"># Result: FIN-SVR-01 at 2021-05-07 04:57:11 → Patient Zero</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l2">5</div>
+    <div class="step-content">
+      <div class="who l2">L2 ANALYST — 30–90 min</div>
+      <h4>Evidence Collection & Preservation</h4>
+      <p>Before reimaging ANYTHING: collect memory dump (Volatility/Magnet RAM Capture), disk image (write-blocked), all relevant logs (Windows Event Logs, Sysmon, EDR telemetry, VPN logs, firewall logs). Chain of custody documentation is mandatory if law enforcement involvement is anticipated. Contact FBI immediately — they need notification within hours.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l2">6</div>
+    <div class="step-content">
+      <div class="who l2">L2 ANALYST — 1–3 hours</div>
+      <h4>Full Scope & Blast Radius Assessment</h4>
+      <p>How many systems encrypted? Are backups affected? Is OT/ICS network reachable from IT? Are domain controllers compromised? If DA is compromised: entire AD environment is untrusted and must be rebuilt. Check for data exfiltration evidence — Rclone, large outbound transfers, cloud uploads. This determines whether double extortion applies.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l2">7</div>
+    <div class="step-content">
+      <div class="who l2">L2 ANALYST — Ongoing</div>
+      <h4>MITRE ATT&CK Mapping & TTP Documentation</h4>
+      <p>Document every observed technique with evidence. Map to ATT&CK. This feeds into: detection rule improvements, threat intel sharing (ISAC), legal documentation, insurance claims, and the post-incident report. Use ATT&CK Navigator to build a visual coverage map and show management where gaps exist.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h3 style="font-size:16px; font-weight:700; margin-bottom:20px; color:var(--orange);">PHASE 3 — CONTAINMENT & RECOVERY (IR LEAD)</h3>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l3">8</div>
+    <div class="step-content">
+      <div class="who l3">IR LEAD — Hours 2–6</div>
+      <h4>Executive & Legal Notification</h4>
+      <p>CISO, CTO, CEO notified. Legal counsel engaged — attorney-client privilege applied to IR findings. Cyber insurance carrier notified (most policies require timely notification). Regulatory notifications assessed (TSA for pipeline operators, SEC for public companies, HHS for healthcare). PR team on standby for potential public disclosure.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l3">9</div>
+    <div class="step-content">
+      <div class="who l3">IR LEAD — Hours 4–12</div>
+      <h4>Ransom Decision (Pay vs. Don't Pay)</h4>
+      <p>Critical decision tree: Are offline backups available and clean? How long will recovery take from backups vs. paying? What is the business impact per day of downtime? Is OFAC compliance required (paying sanctioned actors is illegal)? Colonial paid because backup restoration would take longer than the business could tolerate — and they feared OT compromise. FBI typically advises against paying.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l3">10</div>
+    <div class="step-content">
+      <div class="who l3">IR LEAD + L2 — Days 1–7</div>
+      <h4>Rebuild & Recovery</h4>
+      <p>Rebuild from known-good images — do NOT restore encrypted systems. Rebuild domain controllers first. Reset ALL credentials (assume all passwords compromised if DA was hit). Reimage affected endpoints. Restore data from offline/immutable backups. Verify backup integrity before restoration. Harden: enable MFA everywhere, patch all vulnerabilities, network segment IT from OT, deploy proper EDR coverage.</p>
+    </div>
+  </div>
+
+  <div class="playbook-step">
+    <div class="step-num-circle l3">11</div>
+    <div class="step-content">
+      <div class="who l3">ALL — Post-Incident (Week 2+)</div>
+      <h4>Post-Incident Review & Purple Team Exercise</h4>
+      <p>Formal lessons-learned session. Update detection rules based on gaps identified. Run tabletop exercise to test new playbook. Produce formal incident report (timeline, impact, TTPs, improvements). Share IOCs with ISAC/CISA. Conduct purple team exercise to validate new detection coverage against simulated DarkSide TTPs.</p>
+    </div>
+  </div>
+
+  <div class="alert-box success" style="margin-top:24px;">
+    <div class="alert-icon">✅</div>
+    <div class="alert-content">
+      <h4>Critical Reminder — What Colonial Got Wrong & Right</h4>
+      <p><strong>Wrong:</strong> No MFA on VPN. No 24/7 SOC. No network segmentation between IT and OT. Stale accounts. No credential monitoring. <strong>Right:</strong> Notified FBI immediately. Engaged professional IR firm (Mandiant). Shut down operations to prevent OT spread. Cooperated with authorities — enabling the $2.3M recovery. Transparent with regulators post-incident.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LESSONS ===== -->
+<div class="section" id="section-lessons">
+  <div class="chapter-header">
+    <div class="chapter-num">07</div>
+    <div class="chapter-title">
+      <div class="label">Chapter Seven</div>
+      <h2>Lessons Learned — SOC Analyst Takeaways</h2>
+      <p>Every major ransomware incident teaches the security community something. These are the enduring lessons from Colonial Pipeline for every SOC analyst and future SOP developer.</p>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px;">
+    <div class="lesson">
+      <h4>🔑 Lesson 1: One Password = National Emergency</h4>
+      <p>A single compromised credential in a dark web dump, combined with no MFA and no account lifecycle management, enabled a $4.4M ransom and a 6-day national emergency. Identity hygiene is not a checkbox — it's the most critical control in your environment.</p>
+      <div class="fix">FIX: MFA everywhere. Credential monitoring service (SpyCloud, Have I Been Pwned Enterprise). Automated account deprovisioning. Privileged access management (PAM).</div>
+    </div>
+    <div class="lesson">
+      <h4>👁️ Lesson 2: 9 Days of Invisible Activity</h4>
+      <p>The attacker had 9 days inside the network generating BloodHound queries, dumping credentials, and staging exfiltration. A properly configured SIEM should have caught this within hours. Detection latency directly determines blast radius.</p>
+      <div class="fix">FIX: Tune SIEM for behavioral detections. Enable Sysmon on all endpoints. 24/7 SOC or MDR coverage. Threat hunting schedule targeting dwell-period TTPs.</div>
+    </div>
+    <div class="lesson">
+      <h4>🔒 Lesson 3: IT/OT Convergence Is Your Biggest Risk</h4>
+      <p>Colonial shut down physical pipeline operations NOT because OT was compromised — but because IT was, and they couldn't see the OT network clearly enough to know. Poor IT/OT segmentation created maximum uncertainty during a crisis.</p>
+      <div class="fix">FIX: Implement proper DMZ between IT and OT. Deploy OT-specific security monitoring (Claroty, Dragos, Nozomi). Document all communication paths between IT and OT networks.</div>
+    </div>
+    <div class="lesson">
+      <h4>💾 Lesson 4: Backups Are Your Last Line of Defense</h4>
+      <p>Colonial's decryptor from DarkSide was slow and incomplete. Their fastest recovery path was restoring from backups. But many organizations discover their backups are inadequate, not isolated, or also encrypted when ransomware hits — too late.</p>
+      <div class="fix">FIX: 3-2-1-1 backup rule. Offline/air-gapped copy. Immutable cloud backups. Test restoration quarterly — untested backups are not backups.</div>
+    </div>
+    <div class="lesson">
+      <h4>🚨 Lesson 5: VSS Deletion Is Your Last Chance Before Encryption</h4>
+      <p>Every single ransomware family deletes shadow copies before encrypting. This is a universal, highly reliable indicator. Detecting and auto-isolating on VSS deletion — before encryption completes — is the most impactful single detection rule you can write.</p>
+      <div class="fix">FIX: SOAR playbook: vssadmin delete shadows → immediate auto-isolation via EDR API + alert + page on-call. No analyst intervention required for speed.</div>
+    </div>
+    <div class="lesson">
+      <h4>🌐 Lesson 6: Crypto Isn't Anonymous</h4>
+      <p>The FBI recovered $2.3M of Colonial's $4.4M ransom by tracing Bitcoin through the blockchain and seizing a wallet. This was the first major ransomware ransom recovery and changed the calculus for threat actors — now many use privacy coins (Monero) specifically to avoid this.</p>
+      <div class="fix">IMPLICATION: Work with FBI immediately. Blockchain tracing is a real capability. Never make ransom payments without FBI awareness — they may be able to help recover funds.</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;">Your SOC Maturity Checklist — Post Colonial Pipeline</h3>
+  <div class="g2">
+    <div class="card">
+      <div class="card-tag">Identity & Access</div>
+      <ul>
+        <li><strong>MFA on all VPN and remote access</strong> — non-negotiable</li>
+        <li><strong>Privileged Access Management (PAM)</strong> deployed</li>
+        <li><strong>Credential monitoring</strong> for dark web exposure</li>
+        <li><strong>Account lifecycle automation</strong> — deprovision within 24h of termination</li>
+        <li><strong>Geolocation-based login alerting</strong> in SIEM</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">Detection & Response</div>
+      <ul>
+        <li><strong>24/7 SOC coverage</strong> or MDR contract</li>
+        <li><strong>VSS deletion → auto-isolate</strong> SOAR rule implemented</li>
+        <li><strong>EDR in prevent mode</strong> enterprise-wide (not detect-only)</li>
+        <li><strong>SIEM coverage</strong> for all 16 MITRE techniques above</li>
+        <li><strong>Ransomware tabletop exercise</strong> conducted annually</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">Backup & Recovery</div>
+      <ul>
+        <li><strong>Offline/air-gapped backups</strong> of all critical systems</li>
+        <li><strong>Recovery time tested</strong> — RTO/RPO validated quarterly</li>
+        <li><strong>Immutable backup copies</strong> (cannot be deleted by ransomware)</li>
+        <li><strong>Backups excluded from domain</strong> admin access scope</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-tag">Network Architecture</div>
+      <ul>
+        <li><strong>IT/OT network segmentation</strong> with monitored DMZ</li>
+        <li><strong>Micro-segmentation</strong> limiting lateral movement blast radius</li>
+        <li><strong>Egress filtering</strong> blocking Rclone, Mega, Tor exit nodes</li>
+        <li><strong>Network anomaly detection</strong> (NDR) deployed internally</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert-box success" style="margin-top:28px;">
+    <div class="alert-icon">🎯</div>
+    <div class="alert-content">
+      <h4>You're Ready for SOP Development</h4>
+      <p>You now have the complete SOC-level understanding of a real ransomware incident — from initial access through recovery, with SIEM rules, EDR analysis, MITRE ATT&CK mapping, and IR playbook steps. The next step is formalizing this into your Level 1 and Level 2 Ransomware Detection SOP for your organization. When you're ready, share your environment details (SIEM tool, EDR platform, team size) and we'll build it together.</p>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav.toc button').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleDetail(el) {
+  const detail = el.querySelector('.tl-detail');
+  const isOpen = detail.classList.contains('open');
+  document.querySelectorAll('.tl-detail.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) detail.classList.add('open');
+}
+</script>
+</body>
+</html>
